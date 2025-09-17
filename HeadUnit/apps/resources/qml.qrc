@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- Head Unit -->
+        <file>../head-unit/Main.qml</file>
+
+        <!-- Gear Selector -->
+        <file>../gear-selector/GearSelector.qml</file>
+
+        <!-- Media Player -->
+        <file>../media-player/MediaPlayer.qml</file>
+
+        <!-- Ambient Lighting -->
+        <file>../ambient-lighting/AmbientLighting.qml</file>
+    </qresource>
+</RCC>

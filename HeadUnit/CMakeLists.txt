@@ -1,17 +1,17 @@
 cmake_minimum_required(VERSION 3.16)
-project(head_unit LANGUAGES CXX)
+project(HeadUnit LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-find_package(Qt6 REQUIRED COMPONENTS Core Quick Gui)
-
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 
-add_subdirectory(src/head-unit)
-add_subdirectory(src/media-player)
-#add_subdirectory(src/gear-selector)
-#add_subdirectory(src/ambient-lighting)
-#add_subdirectory(src/settings)
+find_package(Qt6 REQUIRED COMPONENTS Core Quick Gui Qml)
+
+if(UNIX)
+    find_package(Qt6 REQUIRED COMPONENTS DBus)
+endif()
+
+# Add subdirectories
+add_subdirectory(services)
+add_subdirectory(apps)
