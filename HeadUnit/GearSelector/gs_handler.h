@@ -2,6 +2,8 @@
 #define GS_HANDLER_H
 
 #include <QObject>
+#include <QtDBus/QDBusInterface>
+#include <QtDBus/QDBusConnection>
 
 class GS_Handler : public QObject
 {
@@ -10,15 +12,21 @@ class GS_Handler : public QObject
 
 public:
     explicit GS_Handler(QObject *parent = nullptr);
-    
+    ~GS_Handler();
+
     QString currentGear() const;
     void setCurrentGear(const QString &gear);
+
+public slots:
+    void handleGearChange(const QString &newGear);
 
 signals:
     void currentGearChanged();
 
 private:
     QString m_currentGear;
+    QDBusInterface *m_dbusInterface;
+    void setupDBusConnection();
 };
 
 #endif // GS_HANDLER_H
