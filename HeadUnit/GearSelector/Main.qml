@@ -2,14 +2,19 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import GearSelector 1.0
 
 Window {
     id: root
     width: 48
-    height:600
-    color: "#111827"   // bg-gray-900
+    height: 600
+    color: "#111827"
+    visible: true
+    title: "Gear Selector"
 
-    property string selectedGear: "P"
+    GearHandler {
+        id: gearHandler
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -32,11 +37,13 @@ Window {
                     width: parent.width
                     height: 60
                     palette.buttonText: "white"
+                    
                     background: Rectangle {
-                        color: "#111827"
+                        color: gearHandler.currentGear === modelData ? "#374151" : "#111827"
+                        radius: 6
                     }
 
-                    onClicked: root.selectedGear = modelData
+                    onClicked: gearHandler.currentGear = modelData
                 }
             }
         }

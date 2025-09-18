@@ -1,16 +1,15 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QtQuickControls2/QQuickStyle>
+#include "gs_handler.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    // Optional: use a customizable style
-    QQuickStyle::setStyle("Basic");
+    qmlRegisterType<GS_Handler>("GearSelector", 1, 0, "GearHandler");
 
     QQmlApplicationEngine engine;
-    engine.load(QUrl(QStringLiteral("qrc:/GearSelector/Main.qml")));  // <-- Must match your qrc path
+    engine.load(QUrl(QStringLiteral("qrc:/GearSelector/Main.qml")));
 
     if (engine.rootObjects().isEmpty())
         return -1;
