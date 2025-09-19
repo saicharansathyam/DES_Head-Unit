@@ -29,30 +29,38 @@ void MP_Handler::play()
 {
     m_playing = true;
     emit playingChanged();
-    sendDBusMessage("Play");
+    sendDBusMessage("play");
 }
 
 void MP_Handler::pause()
 {
     m_playing = false;
     emit playingChanged();
-    sendDBusMessage("Pause");
+    sendDBusMessage("pause");
 }
 
 void MP_Handler::stop()
 {
     m_playing = false;
     emit playingChanged();
-    sendDBusMessage("Stop");
+    sendDBusMessage("stop");
 }
 
 void MP_Handler::sendDBusMessage(const QString &method)
 {
     QDBusMessage msg = QDBusMessage::createMethodCall(
-        "com.example.MediaPlayer", // service name
-        "/MediaPlayer",            // object path
-        "com.example.MediaPlayer", // interface name
+        "com.example.MediaPlayer",   // service name
+        "/com/example/MediaPlayer",  // object path
+        "com.example.MediaPlayer",   // interface name
         method
-    );
-    QDBusConnection::sessionBus().send(msg);
+        );
+
+    QDBusMessage reply = QDBusConnection::sessionBus().call(msg);
+
+    if (reply.type() == QDBusMessage::ReplyMessage) {
+        if (!reply.arguments().isEmpty())
+            qDebug() << "[DBus] Reply:" << reply.arguments().at(0).toString();
+    } else {
+        qWarning() << "[DBus] Error:" << reply.errorMessage();
+    }
 }

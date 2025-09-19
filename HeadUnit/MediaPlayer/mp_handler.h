@@ -30,6 +30,8 @@ signals:
 private:
     QString m_source;
     bool m_playing;
+    QDBusInterface *m_dbusInterface;
 
+    void setupDBusConnection();
     void sendDBusMessage(const QString &method);
 };
