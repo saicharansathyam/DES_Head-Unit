@@ -26,9 +26,9 @@ void GS_Handler::setupDBusConnection()
 
     // Create interface to the gear service
     m_dbusInterface = new QDBusInterface(
-        "org.des.GearService",           // Service name
-        "/org/des/GearService",          // Path
-        "org.des.GearInterface",         // Interface
+        "com.piracer.dashboard",           // Service name
+        "/com/piracer/dashboard",          // Path
+        "com.piracer.dashboard",         // Interface
         systemBus,
         this
     );
