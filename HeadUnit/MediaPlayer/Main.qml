@@ -4,13 +4,13 @@ import QtMultimedia
 import QtQuick.Dialogs
 import MediaPlayer 1.0
 
-Window {
-    width: 1152
-    height: 560
+Item {
+    id: root
+    width: 600
+    height: 600
     visible: true
-    title: qsTr("Media Player")
 
-    MPHandler{
+    MPHandler {
         id: handler
     }
 
@@ -77,7 +77,7 @@ Window {
 
             Slider {
                 id: seekSlider
-                width: 400
+                width: 200
                 from: 0
                 to: player.duration > 0 ? player.duration : 1
                 value: player.position

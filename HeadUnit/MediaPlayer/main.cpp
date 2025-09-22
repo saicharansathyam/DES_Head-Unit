@@ -6,18 +6,21 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
-
-    QQmlApplicationEngine engine;
+    app.setApplicationName("MediaPlayer");
 
     qmlRegisterType<MP_Handler>("MediaPlayer", 1, 0, "MPHandler");
 
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
+    QQmlApplicationEngine engine;
     engine.load(QUrl::fromLocalFile(QDir::currentPath() + "/MediaPlayer/Main.qml"));
+
+    if (engine.rootObjects().isEmpty()) {
+        qWarning("Failed to load QML file");
+        return -1;
+    }
+
+    // Configure as Wayland client with xdg-shell
+    qputenv("WAYLAND_DISPLAY", "wayland-1");
+    qputenv("QT_LOGGING_RULES", "qt6.*=true;qt6.platform.*=true;qt6.wayland.*=true");
 
     return app.exec();
 }

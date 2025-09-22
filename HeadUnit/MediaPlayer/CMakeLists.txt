@@ -22,10 +22,11 @@ qt_add_qml_module(appMediaPlayer
 )
 
 target_link_libraries(appMediaPlayer
-    PRIVATE Qt6::Quick
-    PRIVATE Qt6::Multimedia
-    PRIVATE Qt6::QuickControls2
-    PRIVATE Qt6::DBus
+    PRIVATE
+    Qt6::Quick
+    Qt6::Multimedia
+    Qt6::QuickControls2
+    Qt6::DBus
 )
 
 include(GNUInstallDirs)

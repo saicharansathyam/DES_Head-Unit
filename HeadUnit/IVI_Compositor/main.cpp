@@ -1,18 +1,19 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
-#include "ivi_compositor.h"
+
+
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    ivi_compositor compositor;
-
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("iviCompositor", &compositor);
+    engine.loadFromModule("IVI_Compositor","Main");
 
-    engine.loadFromModule("IVI_Compositor", "Main");
+    qputenv("WAYLAND_DISPLAY", "wayland-1");
+    qputenv("QT_LOGGING_RULES", "qt6.*=true;qt6.platform.*=true;qt6.wayland.*=true");
 
     return app.exec();
 }
+
+

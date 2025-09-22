@@ -6,7 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Core WaylandCompositor)
 
+# Find Wayland libraries
+find_package(Wayland REQUIRED)
+
 qt_standard_project_setup(REQUIRES 6.8)
+
+add_subdirectory(../GearSelector ${CMAKE_BINARY_DIR}/GearSelector)
+add_subdirectory(../MediaPlayer ${CMAKE_BINARY_DIR}/MediaPlayer)
 
 qt_add_executable(appIVI_Compositor
     main.cpp
@@ -17,7 +23,7 @@ qt_add_qml_module(appIVI_Compositor
     VERSION 1.0
     QML_FILES
         Main.qml
-        SOURCES ivi_compositor.h ivi_compositor.cpp
+        SOURCES
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -31,10 +37,14 @@ set_target_properties(appIVI_Compositor PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
+# Link to QtWayland, Wayland server libraries, and other Qt modules
 target_link_libraries(appIVI_Compositor
-    PRIVATE Qt6::Quick
-    PRIVATE Qt6::Core
-    PRIVATE Qt6::WaylandCompositor
+    PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::WaylandCompositor
+    Wayland::Client
+    Wayland::Server
 )
 
 include(GNUInstallDirs)

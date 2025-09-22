@@ -1,38 +1,72 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import QtWayland.Compositor
+import QtWayland.Compositor.XdgShell
+import QtWayland.Compositor.WlShell
+import QtQuick.Window
 
-Window {
-    width: 1200
-    height: 600
-    visible: true
-    title: qsTr("IVI Compositor")
+WaylandCompositor {
+    id: compositor
 
-    WaylandCompositor {
-        id: compositor
-        socketName: "wayland-ivi"
+    // List to track surfaces
+    property var surfaces: []
+
+    // Handle xdg-shell surfaces
+    XdgShell {
+        onToplevelCreated: (toplevel, xdgSurface) => {
+            console.log("XdgSurface created with title:", xdgSurface.toplevel.title)
+            let surfaceItem = surfaceItemComponent.createObject(
+                xdgSurface.toplevel.title === "GearSelector" ? leftArea : rightArea,
+                {"shellSurface": xdgSurface}
+            )
+            if (!surfaceItem) {
+                console.error("Failed to create ShellSurfaceItem for surface")
+                return
+            }
+            surfaceItem.sizeFollowsSurface = true
+            surfaces.push(surfaceItem)
+        }
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: "#222"
-
-        RowLayout {
+    // Component to render Wayland surfaces
+    Component {
+        id: surfaceItemComponent
+        ShellSurfaceItem {
             anchors.fill: parent
+        }
+    }
 
-            WaylandQuickItem {
-                id: gearSelectorItem
+    WaylandOutput {
+        sizeFollowsWindow: true
+        window: Window {
+            width: 1200
+            height: 600
+            visible: true
+            title: "IVI Compositor"
+
+            Rectangle {
+                id: leftArea
                 width: 200
                 height: parent.height
-                surface: iviCompositor.gearSelectorSurface
+                anchors.left: parent.left
+                color: "cornflowerblue"
+                Text {
+                    anchors.centerIn: parent
+                    text: "GearSelector Surface"
+                    color: "white"
+                }
             }
-
-            WaylandQuickItem {
-                id: mediaPlayerItem
-                width: parent.width - gearSelectorItem.width
+            Rectangle {
+                id: rightArea
+                width: 1000
                 height: parent.height
-                surface: iviCompositor.mediaPlayerSurface
+                anchors.right: parent.right
+                color: "burlywood"
+                Text {
+                    anchors.centerIn: parent
+                    text: "MediaPlayer Surface"
+                    color: "black"
+                }
             }
         }
     }
