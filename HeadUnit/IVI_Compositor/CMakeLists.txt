@@ -3,34 +3,38 @@ cmake_minimum_required(VERSION 3.16)
 project(IVI_Compositor VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD 17)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Core WaylandCompositor)
+# Changed to Qt 6.4
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Quick WaylandCompositor)
 
 # Find Wayland libraries
-find_package(Wayland REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(WAYLAND REQUIRED wayland-server wayland-client)
 
-qt_standard_project_setup(REQUIRES 6.8)
-
-add_subdirectory(../GearSelector ${CMAKE_BINARY_DIR}/GearSelector)
-add_subdirectory(../MediaPlayer ${CMAKE_BINARY_DIR}/MediaPlayer)
+# Remove subdirectory additions since they cause issues
+# Build them separately instead
 
 qt_add_executable(appIVI_Compositor
     main.cpp
+    ivi_compositor.cpp
+    ivi_compositor.h
 )
+
+# Use the new policy so QML modules default to :/qt/qml/ as prefix (Qt 6)
+qt_policy(SET QTP0001 NEW)
 
 qt_add_qml_module(appIVI_Compositor
     URI IVI_Compositor
     VERSION 1.0
     QML_FILES
         Main.qml
-        SOURCES
 )
 
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
 set_target_properties(appIVI_Compositor PROPERTIES
-#    MACOSX_BUNDLE_GUI_IDENTIFIER com.example.appIVI_Compositor
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE
@@ -42,9 +46,14 @@ target_link_libraries(appIVI_Compositor
     PRIVATE
     Qt6::Core
     Qt6::Gui
+    Qt6::Quick
     Qt6::WaylandCompositor
-    Wayland::Client
-    Wayland::Server
+    ${WAYLAND_LIBRARIES}
+)
+
+target_include_directories(appIVI_Compositor
+    PRIVATE
+    ${WAYLAND_INCLUDE_DIRS}
 )
 
 include(GNUInstallDirs)

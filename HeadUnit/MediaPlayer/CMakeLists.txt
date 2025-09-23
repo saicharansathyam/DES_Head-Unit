@@ -1,37 +1,38 @@
 cmake_minimum_required(VERSION 3.16)
+project(MediaPlayer LANGUAGES CXX)
 
-project(MediaPlayer VERSION 0.1 LANGUAGES CXX)
-
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Multimedia QuickControls2)
+# ADD Gui, Qml, QuickControls2
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 DBus Multimedia)
 
-qt_standard_project_setup(REQUIRES 6.8)
-
-qt_add_executable(appMediaPlayer
+add_executable(appMediaPlayer
     main.cpp
     mp_handler.cpp
     mp_handler.h
 )
 
-qt_add_qml_module(appMediaPlayer
-    URI MediaPlayer
-    VERSION 1.0
-    QML_FILES
+qt_add_resources(appMediaPlayer "qml"
+    PREFIX "/MediaPlayer"
+    FILES
         Main.qml
 )
 
+# LINK QuickControls2 (and Gui/Qml)
 target_link_libraries(appMediaPlayer
     PRIVATE
-    Qt6::Quick
-    Qt6::Multimedia
-    Qt6::QuickControls2
-    Qt6::DBus
+      Qt6::Core
+      Qt6::Gui
+      Qt6::Qml
+      Qt6::Quick
+      Qt6::QuickControls2
+      Qt6::DBus
+      Qt6::Multimedia
 )
 
-include(GNUInstallDirs)
-install(TARGETS appMediaPlayer
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+target_compile_definitions(appMediaPlayer
+    PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>
 )
