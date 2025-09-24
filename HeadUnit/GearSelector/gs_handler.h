@@ -12,6 +12,9 @@ class GS_Handler : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString currentGear READ currentGear WRITE setCurrentGear NOTIFY currentGearChanged)
+    Q_PROPERTY(double currentSpeed READ currentSpeed NOTIFY speedChanged)
+    Q_PROPERTY(double batteryLevel READ batteryLevel NOTIFY batteryChanged)
+    Q_PROPERTY(bool isConnected READ isConnected NOTIFY connectionStateChanged)
 
 public:
     explicit GS_Handler(QObject *parent = nullptr);
@@ -19,23 +22,38 @@ public:
 
     QString currentGear() const;
     void setCurrentGear(const QString &gear);
+    
+    double currentSpeed() const;
+    double batteryLevel() const;
+    bool isConnected() const;
 
 public slots:
-    void handleGearChange(const QString &newGear);
+    // Slots for PiRacer D-Bus signals
+    void handlePiRacerGearChange(const QString &newGear);
+    void handleSpeedChange(double speed);
+    void handleBatteryChange(double battery);
+    void handleServiceOwnerChanged(const QString &serviceName, 
+                                  const QString &oldOwner, 
+                                  const QString &newOwner);
 
 signals:
     void currentGearChanged();
     void gearChangeRequested(const QString &gear);
+    void speedChanged(double speed);
+    void batteryChanged(double battery);
     void dbusConnectionError(const QString &error);
+    void dbusConnectionRestored();
+    void connectionStateChanged();
 
 private:
     QString m_currentGear;
-    QDBusInterface *m_dbusInterface;
+    double m_currentSpeed;
+    double m_batteryLevel;
+    QDBusInterface *m_piracerInterface;
     bool m_dbusConnected;
     
     void setupDBusConnection();
-    void registerDBusService();
-    void sendGearChangeSignal(const QString &gear);
+    void syncGearFromPiRacer();
 };
 
 #endif // GS_HANDLER_H
