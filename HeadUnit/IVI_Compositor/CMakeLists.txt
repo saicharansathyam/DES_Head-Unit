@@ -8,8 +8,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 
-# Changed to Qt 6.4
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Quick WaylandCompositor)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick WaylandCompositor)
 
 # Find Wayland libraries
 find_package(PkgConfig REQUIRED)

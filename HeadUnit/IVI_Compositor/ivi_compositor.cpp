@@ -123,7 +123,7 @@ QString ivi_compositor::findExecutable(const QString &appName)
     searchPaths << "/usr/bin/" + appName;
     
     // 5. Development build paths
-    searchPaths << QDir::homePath() + "/HeadUnit/" + appName + "/build/" + appName;
+    searchPaths << QDir::homePath() + "/HeadUnit/" + appName + "/build/Desktop_Qt_6_8_3-Debug/" + appName;
     
     // Check each path
     for (const QString &path : searchPaths) {
@@ -156,14 +156,15 @@ void ivi_compositor::launchGearSelector()
         return;
     }
     
-    QString executable = findExecutable("GearSelector");
+    /*QString executable = findExecutable("GearSelector");
     if (executable.isEmpty()) {
         qWarning() << "Cannot find GearSelector executable";
         return;
-    }
+    }*/
     
-    qDebug() << "Launching GearSelector:" << executable;
-    m_gearSelectorProcess->start(executable, QStringList());
+    qDebug() << "Launching GearSelector: /home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit/GearSelector/build/Desktop_Qt_6_8_3-Debug"; //<< executable;
+    //m_gearSelectorProcess->start(executable, QStringList());
+    m_gearSelectorProcess->start("/home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit/GearSelector/build/Desktop_Qt_6_8_3-Debug/GearSelector");
     
     if (!m_gearSelectorProcess->waitForStarted(3000)) {
         qWarning() << "Failed to start GearSelector:" << m_gearSelectorProcess->errorString();
@@ -179,14 +180,15 @@ void ivi_compositor::launchMediaPlayer()
         return;
     }
     
-    QString executable = findExecutable("MediaPlayer");
+    /*QString executable = findExecutable("MediaPlayer");
     if (executable.isEmpty()) {
         qWarning() << "Cannot find MediaPlayer executable";
         return;
-    }
+    }*/
     
-    qDebug() << "Launching MediaPlayer:" << executable;
-    m_mediaPlayerProcess->start(executable, QStringList());
+    qDebug() << "Launching MediaPlayer: "; // << executable;
+    //m_mediaPlayerProcess->start(executable, QStringList());
+    m_mediaPlayerProcess->start("/home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit/MediaPlayer/build/Desktop_Qt_6_8_3-Debug/MediaPlayer");
     
     if (!m_mediaPlayerProcess->waitForStarted(3000)) {
         qWarning() << "Failed to start MediaPlayer:" << m_mediaPlayerProcess->errorString();

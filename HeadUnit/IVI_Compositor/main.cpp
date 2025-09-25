@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     app.setApplicationName("IVI_Compositor");
     app.setOrganizationName("HeadUnit");
+    ivi_compositor Comp;
 
     qmlRegisterType<ivi_compositor>("IVI_Compositor", 1, 0, "IVICompositor");
 
@@ -29,5 +30,9 @@ int main(int argc, char *argv[])
 
     qDebug() << "IVI Compositor started successfully";
     qDebug() << "Wayland socket name will be set by QML compositor";
+
+    Comp.launchGearSelector();
+    Comp.launchMediaPlayer();
+
     return app.exec();
 }

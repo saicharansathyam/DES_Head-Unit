@@ -7,6 +7,7 @@ ApplicationWindow {
     id: root
     width: 200
     height: 600
+    flags: Qt.FramelessWindowHint
     visible: true
     title: "GearSelector"
     

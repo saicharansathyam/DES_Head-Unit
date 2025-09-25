@@ -10,422 +10,424 @@ import QtWayland.Compositor.XdgShell
 
 import QtWayland.Compositor.WlShell
 
+import IVI_Compositor 1.0
+
 WaylandCompositor {
 
-id: compositor
+    id: compositor
 
-socketName: "wayland-1"
+    socketName: "wayland-1"
 
-// Optional: track all items
+    // Optional: track all items
 
-property var items: []
+    property var items: []
 
-//
+    //
 
-// ---- View for a client surface (with proper scaling) ----
+    // ---- View for a client surface (with proper scaling) ----
 
-//
+    //
 
-Component {
+    Component {
 
-id: surfaceItemComponent
+        id: surfaceItemComponent
 
-WaylandQuickItem {
+        WaylandQuickItem {
 
-id: wqi
+            id: wqi
 
-// pass: surface: when creating
+            // pass: surface: when creating
 
-focusOnClick: true
+            focusOnClick: true
 
-touchEventsEnabled: true
+            touchEventsEnabled: true
 
-anchors.fill: parent
+            anchors.fill: parent
 
-clip: true
+            clip: true
 
-// live buffer size (fallback fits sidebar)
+            // live buffer size (fallback fits sidebar)
 
-property var buf: (surface && surface.size) ? surface.size : Qt.size(200, 600)
+            property var buf: (surface && surface.size) ? surface.size : Qt.size(200, 600)
 
-// Calculate scaling factor to fit content within parent while maintaining aspect ratio
-property real scaleX: parent ? parent.width / Math.max(1, buf.width) : 1
-property real scaleY: parent ? parent.height / Math.max(1, buf.height) : 1
-property real uniformScale: Math.min(scaleX, scaleY, 1.0) // Don't scale up, only down
+            // Calculate scaling factor to fit content within parent while maintaining aspect ratio
+            property real scaleX: parent ? parent.width / Math.max(1, buf.width) : 1
+            property real scaleY: parent ? parent.height / Math.max(1, buf.height) : 1
+            property real uniformScale: Math.min(scaleX, scaleY, 1.0) // Don't scale up, only down
 
-// Set size to original buffer size
-width: buf.width
-height: buf.height
+            // Set size to original buffer size
+            width: buf.width
+            height: buf.height
 
-// Apply uniform scaling
-scale: uniformScale
+            // Apply uniform scaling
+            scale: uniformScale
 
-// Center the scaled item
-transformOrigin: Item.Center
-anchors.centerIn: parent
+            // Center the scaled item
+            transformOrigin: Item.Center
+            anchors.centerIn: parent
 
-}
+        }
 
-}
+    }
 
-//
+    //
 
-// ---- Helper: place item by title (GearSelector → left, MediaPlayer → right) ----
+    // ---- Helper: place item by title (GearSelector → left, MediaPlayer → right) ----
 
-//
+    //
 
-function placeItemByTitle(item, title, toplevelOrShell) {
+    function placeItemByTitle(item, title, toplevelOrShell) {
 
-if (!title || title.length === 0)
+        if (!title || title.length === 0)
 
-return false;
+            return false;
 
-if (title.indexOf("GearSelector") !== -1) {
+        if (title.indexOf("GearSelector") !== -1) {
 
-// clamp GearSelector to sidebar and move left
+            // clamp GearSelector to sidebar and move left
 
-if (toplevelOrShell && toplevelOrShell.setMinSize) {
+            if (toplevelOrShell && toplevelOrShell.setMinSize) {
 
-var sz = Qt.size(leftPanel.width, leftPanel.height);
+                var sz = Qt.size(leftPanel.width, leftPanel.height);
 
-toplevelOrShell.setMinSize(sz);
+                toplevelOrShell.setMinSize(sz);
 
-toplevelOrShell.setMaxSize(sz);
+                toplevelOrShell.setMaxSize(sz);
 
-if (toplevelOrShell.sendConfigure)
+                if (toplevelOrShell.sendConfigure)
 
-toplevelOrShell.sendConfigure(sz, []);
+                    toplevelOrShell.sendConfigure(sz, []);
 
-}
+            }
 
-item.parent = leftPanel;
+            item.parent = leftPanel;
 
-leftPlaceholder.visible = false;
+            leftPlaceholder.visible = false;
 
-return true;
+            return true;
 
-} else if (title.indexOf("MediaPlayer") !== -1) {
+        } else if (title.indexOf("MediaPlayer") !== -1) {
 
-item.parent = rightPanel;
+            item.parent = rightPanel;
 
-rightPlaceholder.visible = false;
+            rightPlaceholder.visible = false;
 
-return true;
+            return true;
 
-}
+        }
 
-return false;
+        return false;
 
-}
+    }
 
-//
+    //
 
-// ---- Fallback: guess pane by buffer width if we never get a title ----
+    // ---- Fallback: guess pane by buffer width if we never get a title ----
 
-//
+    //
 
-function placeItemByWidth(item) {
+    function placeItemByWidth(item) {
 
-const wantLeft = item.width <= leftPanel.width + 20; // 20px tolerance
+        const wantLeft = item.width <= leftPanel.width + 20; // 20px tolerance
 
-const p = wantLeft ? leftPanel : rightPanel;
+        const p = wantLeft ? leftPanel : rightPanel;
 
-if (item.parent !== p) {
+        if (item.parent !== p) {
 
-item.parent = p;
+            item.parent = p;
 
-}
+        }
 
-if (p === leftPanel) leftPlaceholder.visible = false;
+        if (p === leftPanel) leftPlaceholder.visible = false;
 
-if (p === rightPanel) rightPlaceholder.visible = false;
+        if (p === rightPanel) rightPlaceholder.visible = false;
 
-}
+    }
 
-//
+    //
 
-// ---- XDG shell (Qt default) ----
+    // ---- XDG shell (Qt default) ----
 
-//
+    //
 
-XdgShell {
+    XdgShell {
 
-id: xdg
+        id: xdg
 
-onToplevelCreated: {
+        onToplevelCreated: {
 
-// 'toplevel' and 'xdgSurface' are available by name
+            // 'toplevel' and 'xdgSurface' are available by name
 
-var item = surfaceItemComponent.createObject(rightPanel, { surface: xdgSurface.surface });
+            var item = surfaceItemComponent.createObject(rightPanel, { surface: xdgSurface.surface });
 
-if (!item)
+            if (!item)
 
-return;
+                return;
 
-compositor.items.push(item);
+            compositor.items.push(item);
 
-// try route immediately by title
+            // try route immediately by title
 
-if (!placeItemByTitle(item, toplevel.title || "", toplevel)) {
+            if (!placeItemByTitle(item, toplevel.title || "", toplevel)) {
 
-// retry a few times until the title shows up, then fall back to width
+                // retry a few times until the title shows up, then fall back to width
 
-var tries = 0;
+                var tries = 0;
 
-var timer = Qt.createQmlObject(
+                var timer = Qt.createQmlObject(
 
-'import QtQuick 2.15; Timer { interval: 120; repeat: true }',
+                            'import QtQuick 2.15; Timer { interval: 120; repeat: true }',
 
-compositor
+                            compositor
 
-);
+                            );
 
-timer.triggered.connect(function() {
+                timer.triggered.connect(function() {
 
-tries++;
+                    tries++;
 
-if (placeItemByTitle(item, toplevel.title || "", toplevel)) {
+                    if (placeItemByTitle(item, toplevel.title || "", toplevel)) {
 
-timer.stop(); timer.destroy();
+                        timer.stop(); timer.destroy();
 
-return;
+                        return;
 
-}
+                    }
 
-if (tries >= 10) { // ~1.2s total
+                    if (tries >= 10) { // ~1.2s total
 
-placeItemByWidth(item);
+                        placeItemByWidth(item);
 
-timer.stop(); timer.destroy();
+                        timer.stop(); timer.destroy();
 
-}
+                    }
 
-});
+                });
 
-timer.start();
+                timer.start();
 
-}
+            }
 
-}
+        }
 
-}
+    }
 
-//
+    //
 
-// ---- Legacy WL-shell (only if some client uses it) ----
+    // ---- Legacy WL-shell (only if some client uses it) ----
 
-//
+    //
 
-WlShell {
+    WlShell {
 
-id: wlshell
+        id: wlshell
 
-onWlShellSurfaceCreated: function(wlShellSurface) {
+        onWlShellSurfaceCreated: function(wlShellSurface) {
 
-// Use proper parameter name instead of arguments[0]
+            // Use proper parameter name instead of arguments[0]
 
-var s = wlShellSurface;
+            var s = wlShellSurface;
 
-var item = surfaceItemComponent.createObject(rightPanel, { surface: s.surface });
+            var item = surfaceItemComponent.createObject(rightPanel, { surface: s.surface });
 
-if (!item)
+            if (!item)
 
-return;
+                return;
 
-compositor.items.push(item);
+            compositor.items.push(item);
 
-if (!placeItemByTitle(item, s.title || "", null)) {
+            if (!placeItemByTitle(item, s.title || "", null)) {
 
-var tries = 0;
+                var tries = 0;
 
-var timer = Qt.createQmlObject(
+                var timer = Qt.createQmlObject(
 
-'import QtQuick 2.15; Timer { interval: 120; repeat: true }',
+                            'import QtQuick 2.15; Timer { interval: 120; repeat: true }',
 
-compositor
+                            compositor
 
-);
+                            );
 
-timer.triggered.connect(function() {
+                timer.triggered.connect(function() {
 
-tries++;
+                    tries++;
 
-if (placeItemByTitle(item, s.title || "", null)) {
+                    if (placeItemByTitle(item, s.title || "", null)) {
 
-timer.stop(); timer.destroy();
+                        timer.stop(); timer.destroy();
 
-return;
+                        return;
 
-}
+                    }
 
-if (tries >= 10) {
+                    if (tries >= 10) {
 
-placeItemByWidth(item);
+                        placeItemByWidth(item);
 
-timer.stop(); timer.destroy();
+                        timer.stop(); timer.destroy();
 
-}
+                    }
 
-});
+                });
 
-timer.start();
+                timer.start();
 
-}
+            }
 
-}
+        }
 
-}
+    }
 
-//
+    //
 
-// ---- Output / main window ----
+    // ---- Output / main window ----
 
-//
+    //
 
-WaylandOutput {
+    WaylandOutput {
 
-id: output
+        id: output
 
-sizeFollowsWindow: true
+        sizeFollowsWindow: true
 
-window: Window {
+        window: Window {
 
-id: mainWindow
+            id: mainWindow
 
-width: 1200
+            width: 1200
 
-height: 600
+            height: 600
 
-visible: true
+            visible: true
 
-color: "#0f172a"
+            color: "#0f172a"
 
-title: "IVI Compositor - HeadUnit"
+            title: "IVI Compositor - HeadUnit"
 
-Row {
+            Row {
 
-anchors.fill: parent
+                anchors.fill: parent
 
-// Left sidebar (GearSelector)
+                // Left sidebar (GearSelector)
 
-Rectangle {
+                Rectangle {
 
-id: leftPanel
+                    id: leftPanel
 
-width: 200
+                    width: 200
 
-height: parent.height
+                    height: parent.height
 
-color: "#111827"
+                    color: "#111827"
 
-clip: true
+                    clip: true
 
-Rectangle {
+                    Rectangle {
 
-id: leftPlaceholder
+                        id: leftPlaceholder
 
-anchors.fill: parent
+                        anchors.fill: parent
 
-visible: true
+                        visible: true
 
-color: "transparent"
+                        color: "transparent"
 
-Column {
+                        Column {
 
-anchors.centerIn: parent
+                            anchors.centerIn: parent
 
-spacing: 10
+                            spacing: 10
 
-Text { text: "GearSelector"; color: "#4b5563"; font.pixelSize: 14; font.bold: true }
+                            Text { text: "GearSelector"; color: "#4b5563"; font.pixelSize: 14; font.bold: true }
 
-Text { text: "Not Connected"; color: "#374151"; font.pixelSize: 10 }
+                            Text { text: "Not Connected"; color: "#374151"; font.pixelSize: 10 }
 
-}
+                        }
 
-}
+                    }
 
-}
+                }
 
-// Divider
+                // Divider
 
-Rectangle { width: 2; height: parent.height; color: "#1e293b" }
+                Rectangle { width: 2; height: parent.height; color: "#1e293b" }
 
-// Right pane (MediaPlayer)
+                // Right pane (MediaPlayer)
 
-Rectangle {
+                Rectangle {
 
-id: rightPanel
+                    id: rightPanel
 
-width: parent.width - leftPanel.width - 2
+                    width: parent.width - leftPanel.width - 2
 
-height: parent.height
+                    height: parent.height
 
-color: "#1e293b"
+                    color: "#1e293b"
 
-clip: true
+                    clip: true
 
-Rectangle {
+                    Rectangle {
 
-id: rightPlaceholder
+                        id: rightPlaceholder
 
-anchors.fill: parent
+                        anchors.fill: parent
 
-visible: true
+                        visible: true
 
-color: "transparent"
+                        color: "transparent"
 
-Column {
+                        Column {
 
-anchors.centerIn: parent
+                            anchors.centerIn: parent
 
-spacing: 10
+                            spacing: 10
 
-Text { text: "MediaPlayer"; color: "#64748b"; font.pixelSize: 18; font.bold: true }
+                            Text { text: "MediaPlayer"; color: "#64748b"; font.pixelSize: 18; font.bold: true }
 
-Text { text: "Not Connected"; color: "#475569"; font.pixelSize: 12 }
+                            Text { text: "Not Connected"; color: "#475569"; font.pixelSize: 12 }
 
-}
+                        }
 
-}
+                    }
 
-}
+                }
 
-}
+            }
 
-// Bottom status
+            // Bottom status
 
-Rectangle {
+            Rectangle {
 
-anchors.left: parent.left
+                anchors.left: parent.left
 
-anchors.right: parent.right
+                anchors.right: parent.right
 
-anchors.bottom: parent.bottom
+                anchors.bottom: parent.bottom
 
-height: 28
+                height: 28
 
-color: "#0f172a"
+                color: "#0f172a"
 
-Row {
+                Row {
 
-anchors.verticalCenter: parent.verticalCenter
+                    anchors.verticalCenter: parent.verticalCenter
 
-anchors.left: parent.left
+                    anchors.left: parent.left
 
-anchors.leftMargin: 10
+                    anchors.leftMargin: 10
 
-spacing: 16
+                    spacing: 16
 
-Text { text: "Clients: " + compositor.items.length; color: "#94a3b8"; font.pixelSize: 12 }
+                    Text { text: "Clients: " + compositor.items.length; color: "#94a3b8"; font.pixelSize: 12 }
 
-Text { text: "Socket: " + compositor.socketName; color: "#64748b"; font.pixelSize: 12 }
+                    Text { text: "Socket: " + compositor.socketName; color: "#64748b"; font.pixelSize: 12 }
 
-}
+                }
 
-}
+            }
 
-}
+        }
 
-}
+    }
 
 }

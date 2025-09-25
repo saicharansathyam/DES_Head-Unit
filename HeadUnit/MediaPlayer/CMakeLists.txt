@@ -9,20 +9,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # ADD Gui, Qml, QuickControls2
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 DBus Multimedia)
 
-add_executable(appMediaPlayer
+add_executable(MediaPlayer
     main.cpp
     mp_handler.cpp
     mp_handler.h
+    Main.qml
 )
 
-qt_add_resources(appMediaPlayer "qml"
+qt_add_resources(MediaPlayer "qml"
     PREFIX "/MediaPlayer"
     FILES
         Main.qml
 )
 
 # LINK QuickControls2 (and Gui/Qml)
-target_link_libraries(appMediaPlayer
+target_link_libraries(MediaPlayer
     PRIVATE
       Qt6::Core
       Qt6::Gui
@@ -33,6 +34,6 @@ target_link_libraries(appMediaPlayer
       Qt6::Multimedia
 )
 
-target_compile_definitions(appMediaPlayer
+target_compile_definitions(MediaPlayer
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>
 )

@@ -9,13 +9,14 @@ ApplicationWindow {
     id: root
     width: 1000
     height: 600
+    flags: Qt.FramelessWindowHint
     visible: true
     title: "MediaPlayer"
-    
+
     property color primaryColor: "#1e293b"
     property color secondaryColor: "#334155"
     property color accentColor: "#3b82f6"
-    
+
     MPHandler {
         id: handler
         onMediaError: function(error) {
@@ -34,25 +35,25 @@ ApplicationWindow {
             volume: handler.volume / 100.0
         }
         videoOutput: videoOutput
-        
+
         onPlaybackStateChanged: {
             handler.playing = (playbackState === MediaPlayer.PlayingState)
         }
-        
+
         onPositionChanged: {
             handler.position = position
         }
-        
+
         onDurationChanged: {
             handler.setDuration(duration)
         }
-        
+
         onErrorOccurred: function(error, errorString) {
             errorLabel.text = "Playback Error: " + errorString
             errorTimer.restart()
             handler.stop()
         }
-        
+
         onHasVideoChanged: {
             if (hasVideo) {
                 videoOutput.visible = true
@@ -70,24 +71,24 @@ ApplicationWindow {
             GradientStop { position: 0.0; color: primaryColor }
             GradientStop { position: 1.0; color: "#0f172a" }
         }
-        
+
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
-            
+
             // Media display area
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 color: "transparent"
-                
+
                 VideoOutput {
                     id: videoOutput
                     anchors.fill: parent
                     fillMode: VideoOutput.PreserveAspectFit
                     visible: false
                 }
-                
+
                 // Album art / visualization placeholder when no video
                 Rectangle {
                     id: albumArt
@@ -97,20 +98,27 @@ ApplicationWindow {
                     radius: 20
                     color: secondaryColor
                     visible: !videoOutput.visible
-                    
+
                     Column {
                         anchors.centerIn: parent
                         spacing: 20
-                        
-                        Image {
-                            source: "qrc:/icons/music-note.svg"
+
+                        Rectangle {
                             width: 100
                             height: 100
-                            fillMode: Image.PreserveAspectFit
+                            color: "#64748b"
+                            radius: 10
                             anchors.horizontalCenter: parent.horizontalCenter
                             opacity: 0.5
+
+                            Text {
+                                text: "♪"
+                                anchors.centerIn: parent
+                                font.pixelSize: 48
+                                color: "white"
+                            }
                         }
-                        
+
                         Label {
                             text: handler.source ? handler.source.toString().split('/').pop() : "No Media Loaded"
                             color: "white"
@@ -119,7 +127,7 @@ ApplicationWindow {
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                     }
-                    
+
                     // Animated border when playing
                     Rectangle {
                         anchors.fill: parent
@@ -128,11 +136,11 @@ ApplicationWindow {
                         border.color: accentColor
                         border.width: 2
                         opacity: handler.playing ? 0.5 : 0
-                        
+
                         Behavior on opacity {
                             NumberAnimation { duration: 500 }
                         }
-                        
+
                         SequentialAnimation on border.width {
                             running: handler.playing
                             loops: Animation.Infinite
@@ -142,7 +150,7 @@ ApplicationWindow {
                     }
                 }
             }
-            
+
             // Error display
             Rectangle {
                 id: errorContainer
@@ -150,18 +158,18 @@ ApplicationWindow {
                 height: errorLabel.text ? 40 : 0
                 color: "#ef4444"
                 visible: height > 0
-                
+
                 Behavior on height {
                     NumberAnimation { duration: 200 }
                 }
-                
+
                 Label {
                     id: errorLabel
                     anchors.centerIn: parent
                     color: "white"
                     font.pixelSize: 14
                     text: ""
-                    
+
                     Timer {
                         id: errorTimer
                         interval: 5000
@@ -169,277 +177,369 @@ ApplicationWindow {
                     }
                 }
             }
-            
-            // Control bar
+
+            // Control bar - FIXED SECTION
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 180
+                height: 180  // Fixed height instead of Layout.preferredHeight
                 color: primaryColor
-                
-                ColumnLayout {
+
+                Column {
                     anchors.fill: parent
                     anchors.margins: 20
                     spacing: 15
-                    
-                    // Progress bar
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 5
-                        
-                        Slider {
-                            id: seekSlider
-                            Layout.fillWidth: true
-                            from: 0
-                            to: handler.duration > 0 ? handler.duration : 1
-                            value: handler.position
-                            enabled: handler.duration > 0
-                            
-                            onMoved: {
-                                player.position = value
-                                handler.seek(value)
-                            }
-                            
-                            background: Rectangle {
-                                height: 6
-                                radius: 3
-                                color: secondaryColor
-                                
-                                Rectangle {
-                                    width: seekSlider.visualPosition * parent.width
-                                    height: parent.height
-                                    radius: 3
-                                    color: accentColor
+
+                    // Progress bar section
+                    Item {
+                        width: parent.width
+                        height: 40
+
+                        Column {
+                            anchors.fill: parent
+                            spacing: 5
+
+                            Slider {
+                                id: seekSlider
+                                width: parent.width
+                                height: 20
+                                from: 0
+                                to: handler.duration > 0 ? handler.duration : 1
+                                value: handler.position
+                                enabled: handler.duration > 0
+
+                                onMoved: {
+                                    player.position = value
+                                    handler.seek(value)
                                 }
-                            }
-                            
-                            handle: Rectangle {
-                                x: seekSlider.visualPosition * (seekSlider.width - width)
-                                y: (seekSlider.height - height) / 2
-                                width: 16
-                                height: 16
-                                radius: 8
-                                color: seekSlider.pressed ? Qt.lighter(accentColor, 1.2) : accentColor
-                                
-                                Behavior on color {
-                                    ColorAnimation { duration: 150 }
-                                }
-                            }
-                        }
-                        
-                        RowLayout {
-                            Layout.fillWidth: true
-                            
-                            Label {
-                                text: formatTime(handler.position)
-                                color: "white"
-                                font.pixelSize: 12
-                            }
-                            
-                            Item { Layout.fillWidth: true }
-                            
-                            Label {
-                                text: formatTime(handler.duration)
-                                color: "white"
-                                font.pixelSize: 12
-                            }
-                        }
-                    }
-                    
-                    // Main controls
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 15
-                        
-                        // Left side - File controls
-                        Button {
-                            text: "Open"
-                            Layout.preferredWidth: 80
-                            onClicked: fileDialog.open()
-                            
-                            background: Rectangle {
-                                color: parent.hovered ? Qt.lighter(secondaryColor, 1.2) : secondaryColor
-                                radius: 6
-                            }
-                            
-                            contentItem: Text {
-                                text: parent.text
-                                color: "white"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                        }
-                        
-                        Item { Layout.fillWidth: true }
-                        
-                        // Center - Playback controls
-                        RowLayout {
-                            spacing: 10
-                            
-                            Button {
-                                icon.source: "qrc:/icons/skip-back.svg"
-                                icon.width: 24
-                                icon.height: 24
-                                onClicked: handler.previous()
-                                
+
                                 background: Rectangle {
-                                    width: 40
-                                    height: 40
-                                    radius: 20
-                                    color: parent.hovered ? Qt.lighter(secondaryColor, 1.2) : "transparent"
-                                }
-                            }
-                            
-                            Button {
-                                icon.source: handler.playing ? "qrc:/icons/pause.svg" : "qrc:/icons/play.svg"
-                                icon.width: 32
-                                icon.height: 32
-                                onClicked: {
-                                    if (handler.playing) {
-                                        player.pause()
-                                        handler.pause()
-                                    } else {
-                                        player.play()
-                                        handler.play()
+                                    x: seekSlider.leftPadding
+                                    y: seekSlider.topPadding + seekSlider.availableHeight / 2 - height / 2
+                                    width: seekSlider.availableWidth
+                                    height: 6
+                                    radius: 3
+                                    color: secondaryColor
+
+                                    Rectangle {
+                                        width: seekSlider.visualPosition * parent.width
+                                        height: parent.height
+                                        radius: 3
+                                        color: accentColor
                                     }
                                 }
-                                
-                                background: Rectangle {
-                                    width: 56
-                                    height: 56
-                                    radius: 28
-                                    color: parent.hovered ? Qt.lighter(accentColor, 1.1) : accentColor
-                                    
+
+                                handle: Rectangle {
+                                    x: seekSlider.leftPadding + seekSlider.visualPosition * (seekSlider.availableWidth - width)
+                                    y: seekSlider.topPadding + seekSlider.availableHeight / 2 - height / 2
+                                    width: 16
+                                    height: 16
+                                    radius: 8
+                                    color: seekSlider.pressed ? Qt.lighter(accentColor, 1.2) : accentColor
+
                                     Behavior on color {
                                         ColorAnimation { duration: 150 }
                                     }
                                 }
                             }
-                            
-                            Button {
-                                icon.source: "qrc:/icons/skip-forward.svg"
-                                icon.width: 24
-                                icon.height: 24
-                                onClicked: handler.next()
-                                
-                                background: Rectangle {
-                                    width: 40
-                                    height: 40
-                                    radius: 20
-                                    color: parent.hovered ? Qt.lighter(secondaryColor, 1.2) : "transparent"
+
+                            Row {
+                                width: parent.width
+
+                                Label {
+                                    text: formatTime(handler.position)
+                                    color: "white"
+                                    font.pixelSize: 12
                                 }
-                            }
-                            
-                            Button {
-                                icon.source: "qrc:/icons/stop.svg"
-                                icon.width: 24
-                                icon.height: 24
-                                onClicked: {
-                                    player.stop()
-                                    handler.stop()
+
+                                Item {
+                                    width: parent.width - 120
+                                    height: 1
                                 }
-                                
-                                background: Rectangle {
-                                    width: 40
-                                    height: 40
-                                    radius: 20
-                                    color: parent.hovered ? Qt.lighter(secondaryColor, 1.2) : "transparent"
+
+                                Label {
+                                    text: formatTime(handler.duration)
+                                    color: "white"
+                                    font.pixelSize: 12
                                 }
-                            }
-                        }
-                        
-                        Item { Layout.fillWidth: true }
-                        
-                        // Right side - Volume control
-                        RowLayout {
-                            spacing: 10
-                            
-                            Image {
-                                source: "qrc:/icons/volume.svg"
-                                width: 20
-                                height: 20
-                                opacity: 0.7
-                            }
-                            
-                            Slider {
-                                id: volumeSlider
-                                Layout.preferredWidth: 100
-                                from: 0
-                                to: 100
-                                value: handler.volume
-                                onValueChanged: {
-                                    handler.volume = value
-                                    player.audioOutput.volume = value / 100.0
-                                }
-                                
-                                background: Rectangle {
-                                    height: 4
-                                    radius: 2
-                                    color: secondaryColor
-                                    
-                                    Rectangle {
-                                        width: volumeSlider.visualPosition * parent.width
-                                        height: parent.height
-                                        radius: 2
-                                        color: accentColor
-                                    }
-                                }
-                                
-                                handle: Rectangle {
-                                    x: volumeSlider.visualPosition * (volumeSlider.width - width)
-                                    y: (volumeSlider.height - height) / 2
-                                    width: 12
-                                    height: 12
-                                    radius: 6
-                                    color: volumeSlider.pressed ? Qt.lighter(accentColor, 1.2) : accentColor
-                                }
-                            }
-                            
-                            Label {
-                                text: handler.volume + "%"
-                                color: "white"
-                                font.pixelSize: 12
-                                Layout.preferredWidth: 35
                             }
                         }
                     }
-                    
-                    // Status bar
-                    RowLayout {
-                        Layout.fillWidth: true
-                        
-                        Rectangle {
-                            width: 8
-                            height: 8
-                            radius: 4
-                            color: handler.playing ? "#10b981" : "#6b7280"
-                            
-                            SequentialAnimation on opacity {
-                                running: handler.playing
-                                loops: Animation.Infinite
-                                NumberAnimation { to: 0.3; duration: 500 }
-                                NumberAnimation { to: 1.0; duration: 500 }
+
+                    // Main controls section - COMPLETELY REWRITTEN
+                    Item {
+                        width: parent.width
+                        height: 60
+
+                        Row {
+                            anchors.fill: parent
+                            spacing: 0
+
+                            // Left - Open button
+                            Item {
+                                width: parent.width * 0.2
+                                height: parent.height
+
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 80
+                                    height: 40
+                                    color: openButton.hovered ? Qt.lighter(secondaryColor, 1.2) : secondaryColor
+                                    radius: 6
+
+                                    MouseArea {
+                                        id: openButton
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        onClicked: fileDialog.open()
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "Open"
+                                            color: "white"
+                                            font.pixelSize: 14
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Center - Playback controls
+                            Item {
+                                width: parent.width * 0.6
+                                height: parent.height
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 15
+
+                                    // Previous button
+                                    Rectangle {
+                                        width: 40
+                                        height: 40
+                                        radius: 20
+                                        color: prevButton.hovered ? Qt.lighter(secondaryColor, 1.2) : "transparent"
+                                        border.color: prevButton.hovered ? secondaryColor : "transparent"
+                                        border.width: 1
+
+                                        MouseArea {
+                                            id: prevButton
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: handler.previous()
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "⏮"
+                                            color: "white"
+                                            font.pixelSize: 16
+                                        }
+                                    }
+
+                                    // Play/Pause button
+                                    Rectangle {
+                                        width: 56
+                                        height: 56
+                                        radius: 28
+                                        color: playButton.hovered ? Qt.lighter(accentColor, 1.1) : accentColor
+
+                                        Behavior on color {
+                                            ColorAnimation { duration: 150 }
+                                        }
+
+                                        MouseArea {
+                                            id: playButton
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: {
+                                                if (handler.playing) {
+                                                    player.pause()
+                                                    handler.pause()
+                                                } else {
+                                                    player.play()
+                                                    handler.play()
+                                                }
+                                            }
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: handler.playing ? "⏸" : "▶"
+                                            color: "white"
+                                            font.pixelSize: 20
+                                        }
+                                    }
+
+                                    // Next button
+                                    Rectangle {
+                                        width: 40
+                                        height: 40
+                                        radius: 20
+                                        color: nextButton.hovered ? Qt.lighter(secondaryColor, 1.2) : "transparent"
+                                        border.color: nextButton.hovered ? secondaryColor : "transparent"
+                                        border.width: 1
+
+                                        MouseArea {
+                                            id: nextButton
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: handler.next()
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "⏭"
+                                            color: "white"
+                                            font.pixelSize: 16
+                                        }
+                                    }
+
+                                    // Stop button
+                                    Rectangle {
+                                        width: 40
+                                        height: 40
+                                        radius: 20
+                                        color: stopButton.hovered ? Qt.lighter(secondaryColor, 1.2) : "transparent"
+                                        border.color: stopButton.hovered ? secondaryColor : "transparent"
+                                        border.width: 1
+
+                                        MouseArea {
+                                            id: stopButton
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: {
+                                                player.stop()
+                                                handler.stop()
+                                            }
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "⏹"
+                                            color: "white"
+                                            font.pixelSize: 16
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Right - Volume control
+                            Item {
+                                width: parent.width * 0.2
+                                height: parent.height
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: 10
+
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "🔊"
+                                        color: "white"
+                                        font.pixelSize: 16
+                                        opacity: 0.7
+                                    }
+
+                                    Slider {
+                                        id: volumeSlider
+                                        width: 100
+                                        height: 20
+                                        from: 0
+                                        to: 100
+                                        value: handler.volume
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        onValueChanged: {
+                                            handler.volume = value
+                                            player.audioOutput.volume = value / 100.0
+                                        }
+
+                                        background: Rectangle {
+                                            x: volumeSlider.leftPadding
+                                            y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                                            width: volumeSlider.availableWidth
+                                            height: 4
+                                            radius: 2
+                                            color: secondaryColor
+
+                                            Rectangle {
+                                                width: volumeSlider.visualPosition * parent.width
+                                                height: parent.height
+                                                radius: 2
+                                                color: accentColor
+                                            }
+                                        }
+
+                                        handle: Rectangle {
+                                            x: volumeSlider.leftPadding + volumeSlider.visualPosition * (volumeSlider.availableWidth - width)
+                                            y: volumeSlider.topPadding + volumeSlider.availableHeight / 2 - height / 2
+                                            width: 12
+                                            height: 12
+                                            radius: 6
+                                            color: volumeSlider.pressed ? Qt.lighter(accentColor, 1.2) : accentColor
+                                        }
+                                    }
+
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: Math.round(handler.volume) + "%"
+                                        color: "white"
+                                        font.pixelSize: 12
+                                        width: 35
+                                    }
+                                }
                             }
                         }
-                        
-                        Label {
-                            text: handler.currentState
-                            color: "#9ca3af"
-                            font.pixelSize: 12
-                        }
-                        
-                        Item { Layout.fillWidth: true }
-                        
-                        Label {
-                            text: "MediaPlayer v1.0"
-                            color: "#6b7280"
-                            font.pixelSize: 10
+                    }
+
+                    // Status bar
+                    Item {
+                        width: parent.width
+                        height: 20
+
+                        Row {
+                            anchors.fill: parent
+                            spacing: 10
+
+                            Rectangle {
+                                width: 8
+                                height: 8
+                                radius: 4
+                                color: handler.playing ? "#10b981" : "#6b7280"
+                                anchors.verticalCenter: parent.verticalCenter
+
+                                SequentialAnimation on opacity {
+                                    running: handler.playing
+                                    loops: Animation.Infinite
+                                    NumberAnimation { to: 0.3; duration: 500 }
+                                    NumberAnimation { to: 1.0; duration: 500 }
+                                }
+                            }
+
+                            Label {
+                                text: handler.currentState || "Ready"
+                                color: "#9ca3af"
+                                font.pixelSize: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+
+                            Item {
+                                width: parent.width - 300
+                                height: 1
+                            }
+
+                            Label {
+                                text: "MediaPlayer v1.0"
+                                color: "#6b7280"
+                                font.pixelSize: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
                         }
                     }
                 }
             }
         }
     }
-    
+
     FileDialog {
         id: fileDialog
         title: "Select Media File"
@@ -454,7 +554,7 @@ ApplicationWindow {
             player.source = fileDialog.selectedFile
         }
     }
-    
+
     // Helper function to format time
     function formatTime(ms) {
         if (ms === 0 || isNaN(ms)) return "00:00"
@@ -463,13 +563,13 @@ ApplicationWindow {
         var hours = Math.floor(minutes / 60)
         seconds = seconds % 60
         minutes = minutes % 60
-        
+
         if (hours > 0) {
-            return hours + ":" + 
-                   (minutes < 10 ? "0" : "") + minutes + ":" + 
+            return hours + ":" +
+                   (minutes < 10 ? "0" : "") + minutes + ":" +
                    (seconds < 10 ? "0" : "") + seconds
         } else {
-            return (minutes < 10 ? "0" : "") + minutes + ":" + 
+            return (minutes < 10 ? "0" : "") + minutes + ":" +
                    (seconds < 10 ? "0" : "") + seconds
         }
     }
