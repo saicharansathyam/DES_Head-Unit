@@ -201,11 +201,7 @@ void ivi_compositor::launchClients()
 {
     qDebug() << "Launching client applications...";
     launchGearSelector();
-    
-    // Add a small delay before launching the second client
-    QTimer::singleShot(500, this, [this]() {
-        launchMediaPlayer();
-    });
+    launchMediaPlayer();
     
     // Start monitoring client status
     m_statusTimer->start();

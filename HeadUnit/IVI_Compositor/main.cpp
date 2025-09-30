@@ -31,8 +31,7 @@ int main(int argc, char *argv[])
     qDebug() << "IVI Compositor started successfully";
     qDebug() << "Wayland socket name will be set by QML compositor";
 
-    Comp.launchGearSelector();
-    Comp.launchMediaPlayer();
+    Comp.setAutoLaunchClients(true);
 
     return app.exec();
 }

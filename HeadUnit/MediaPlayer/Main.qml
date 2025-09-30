@@ -3,13 +3,12 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtMultimedia
 import QtQuick.Dialogs
-import MediaPlayer 1.0
 
 ApplicationWindow {
     id: root
     width: 1000
     height: 600
-    flags: Qt.FramelessWindowHint
+    //flags: Qt.FramelessWindowHint
     visible: true
     title: "MediaPlayer"
 
@@ -17,35 +16,25 @@ ApplicationWindow {
     property color secondaryColor: "#334155"
     property color accentColor: "#3b82f6"
 
-    MPHandler {
-        id: handler
-        onMediaError: function(error) {
-            errorLabel.text = error
-            errorTimer.restart()
-        }
-        onDurationChanged: {
-            player.duration = handler.duration
-        }
-    }
-
     MediaPlayer {
         id: player
-        source: handler.source
+
         audioOutput: AudioOutput {
-            volume: handler.volume / 100.0
+            volume: player.volume / 100.0
         }
+
         videoOutput: videoOutput
 
         onPlaybackStateChanged: {
-            handler.playing = (playbackState === MediaPlayer.PlayingState)
+            player.playing = (playbackState === MediaPlayer.PlayingState)
         }
 
         onPositionChanged: {
-            handler.position = position
+            player.position = position
         }
 
         onDurationChanged: {
-            handler.setDuration(duration)
+            player.setDuration(duration)
         }
 
         onErrorOccurred: function(error, errorString) {
@@ -120,7 +109,7 @@ ApplicationWindow {
                         }
 
                         Label {
-                            text: handler.source ? handler.source.toString().split('/').pop() : "No Media Loaded"
+                            text: player.source ? player.source.toString().split('/').pop() : "No Media Loaded"
                             color: "white"
                             font.pixelSize: 16
                             opacity: 0.7
@@ -135,7 +124,7 @@ ApplicationWindow {
                         color: "transparent"
                         border.color: accentColor
                         border.width: 2
-                        opacity: handler.playing ? 0.5 : 0
+                        opacity: player.playing ? 0.5 : 0
 
                         Behavior on opacity {
                             NumberAnimation { duration: 500 }
@@ -203,13 +192,13 @@ ApplicationWindow {
                                 width: parent.width
                                 height: 20
                                 from: 0
-                                to: handler.duration > 0 ? handler.duration : 1
-                                value: handler.position
-                                enabled: handler.duration > 0
+                                to: player.duration > 0 ? player.duration : 1
+                                value: player.position
+                                enabled: player.duration > 0
 
                                 onMoved: {
                                     player.position = value
-                                    handler.seek(value)
+                                    player.seek(value)
                                 }
 
                                 background: Rectangle {
@@ -246,18 +235,20 @@ ApplicationWindow {
                                 width: parent.width
 
                                 Label {
-                                    text: formatTime(handler.position)
+                                    id: playerPosition
+                                    text: formatTime(player.position)
                                     color: "white"
                                     font.pixelSize: 12
                                 }
 
                                 Item {
-                                    width: parent.width - 120
+                                    width: parent.width - 5
                                     height: 1
                                 }
 
                                 Label {
-                                    text: formatTime(handler.duration)
+                                    id: playerDuration
+                                    text: formatTime(player.duration)
                                     color: "white"
                                     font.pixelSize: 12
                                 }
@@ -324,7 +315,7 @@ ApplicationWindow {
                                             id: prevButton
                                             anchors.fill: parent
                                             hoverEnabled: true
-                                            onClicked: handler.previous()
+                                            onClicked: player.previous()
                                         }
 
                                         Text {
@@ -353,17 +344,15 @@ ApplicationWindow {
                                             onClicked: {
                                                 if (handler.playing) {
                                                     player.pause()
-                                                    handler.pause()
                                                 } else {
                                                     player.play()
-                                                    handler.play()
                                                 }
                                             }
                                         }
 
                                         Text {
                                             anchors.centerIn: parent
-                                            text: handler.playing ? "⏸" : "▶"
+                                            text: player.playing ? "⏸" : "▶"
                                             color: "white"
                                             font.pixelSize: 20
                                         }
@@ -382,7 +371,7 @@ ApplicationWindow {
                                             id: nextButton
                                             anchors.fill: parent
                                             hoverEnabled: true
-                                            onClicked: handler.next()
+                                            onClicked: player.next()
                                         }
 
                                         Text {
@@ -408,7 +397,6 @@ ApplicationWindow {
                                             hoverEnabled: true
                                             onClicked: {
                                                 player.stop()
-                                                handler.stop()
                                             }
                                         }
 
@@ -493,6 +481,7 @@ ApplicationWindow {
 
                     // Status bar
                     Item {
+                        id:statusbar
                         width: parent.width
                         height: 20
 
@@ -504,11 +493,11 @@ ApplicationWindow {
                                 width: 8
                                 height: 8
                                 radius: 4
-                                color: handler.playing ? "#10b981" : "#6b7280"
+                                color: player.playing ? "#10b981" : "#6b7280"
                                 anchors.verticalCenter: parent.verticalCenter
 
                                 SequentialAnimation on opacity {
-                                    running: handler.playing
+                                    running: player.playing
                                     loops: Animation.Infinite
                                     NumberAnimation { to: 0.3; duration: 500 }
                                     NumberAnimation { to: 1.0; duration: 500 }
@@ -532,6 +521,7 @@ ApplicationWindow {
                                 color: "#6b7280"
                                 font.pixelSize: 10
                                 anchors.verticalCenter: parent.verticalCenter
+                                anchors.right: parent.right
                             }
                         }
                     }
@@ -550,7 +540,6 @@ ApplicationWindow {
             "All files (*)"
         ]
         onAccepted: {
-            handler.source = fileDialog.selectedFile.toString()
             player.source = fileDialog.selectedFile
         }
     }
