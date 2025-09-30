@@ -33,6 +33,7 @@ class MockDashboardService(dbus.service.Object):
         self.current_gear = 'P'
         self.turn_mode = 'off'
         self.headunit_connected = False
+        self.current_color = "#007ACC"  # default theme color
         
         print(f"✓ Mock Dashboard Service started at {IFACE}")
         print("  - No hardware required")
@@ -190,6 +191,24 @@ class MockDashboardService(dbus.service.Object):
         print(f"[Media] Command received: {command}")
         # In mock mode, just log the command
         return
+        
+    dbus.service.method(IFACE, out_signature='s')
+    def GetColor(self):
+        """Get the current theme color."""
+        return self.current_color
+
+    @dbus.service.method(IFACE, in_signature='s', out_signature='')
+    def SetColor(self, color):
+        """Set the theme color, expects hex string (#RRGGBB)."""
+        # Minimal validation (can be extended)
+        if not isinstance(color, str) or not color.startswith('#') or len(color) not in (7, 9):
+            raise dbus.DBusException('Invalid color format, expected "#RRGGBB"')
+        
+        old_color = self.current_color
+        if color != old_color:
+            self.current_color = color
+            print(f"[ThemeColor] {old_color} → {color}")
+            GLib.idle_add(self._emit_color, color)
     
     # ========== D-Bus Signals ==========
     @dbus.service.signal(IFACE, signature='d')
@@ -207,6 +226,9 @@ class MockDashboardService(dbus.service.Object):
     @dbus.service.signal(IFACE, signature='b')
     def HeadUnitConnected(self, connected): pass
     
+    @dbus.service.signal(IFACE, signature='s')
+    def ColorChanged(self, color): pass
+    
     # ========== Emit Helpers ==========
     def _emit_speed(self, speed):
         self.SpeedChanged(speed)
@@ -218,6 +240,10 @@ class MockDashboardService(dbus.service.Object):
     
     def _emit_gear(self, gear):
         self.GearChanged(gear)
+        return False
+        
+    def _emit_color(self, color):
+        self.ColorChanged(color)
         return False
 
 if __name__ == '__main__':
