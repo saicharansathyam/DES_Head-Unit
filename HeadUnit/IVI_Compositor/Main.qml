@@ -8,8 +8,6 @@ import QtWayland.Compositor
 
 import QtWayland.Compositor.XdgShell
 
-import QtWayland.Compositor.WlShell
-
 import IVI_Compositor 1.0
 
 WaylandCompositor {
@@ -154,9 +152,7 @@ WaylandCompositor {
 
         id: xdg
 
-        onToplevelCreated: {
-
-            // 'toplevel' and 'xdgSurface' are available by name
+        onToplevelCreated: function(toplevel, xdgSurface){
 
             var item = surfaceItemComponent.createObject(rightPanel, { surface: xdgSurface.surface });
 
@@ -212,71 +208,6 @@ WaylandCompositor {
 
     }
 
-    //
-
-    // ---- Legacy WL-shell (only if some client uses it) ----
-
-    //
-
-    WlShell {
-
-        id: wlshell
-
-        onWlShellSurfaceCreated: function(wlShellSurface) {
-
-            // Use proper parameter name instead of arguments[0]
-
-            var s = wlShellSurface;
-
-            var item = surfaceItemComponent.createObject(rightPanel, { surface: s.surface });
-
-            if (!item)
-
-                return;
-
-            compositor.items.push(item);
-
-            if (!placeItemByTitle(item, s.title || "", null)) {
-
-                var tries = 0;
-
-                var timer = Qt.createQmlObject(
-
-                            'import QtQuick 2.15; Timer { interval: 120; repeat: true }',
-
-                            compositor
-
-                            );
-
-                timer.triggered.connect(function() {
-
-                    tries++;
-
-                    if (placeItemByTitle(item, s.title || "", null)) {
-
-                        timer.stop(); timer.destroy();
-
-                        return;
-
-                    }
-
-                    if (tries >= 10) {
-
-                        placeItemByWidth(item);
-
-                        timer.stop(); timer.destroy();
-
-                    }
-
-                });
-
-                timer.start();
-
-            }
-
-        }
-
-    }
 
     //
 
@@ -388,46 +319,11 @@ WaylandCompositor {
 
                         }
 
-                    }
+                        }
 
-                }
+                        }
 
+                        }
+                        }
             }
-
-            // Bottom status
-
-            Rectangle {
-
-                anchors.left: parent.left
-
-                anchors.right: parent.right
-
-                anchors.bottom: parent.bottom
-
-                height: 28
-
-                color: "#0f172a"
-
-                Row {
-
-                    anchors.verticalCenter: parent.verticalCenter
-
-                    anchors.left: parent.left
-
-                    anchors.leftMargin: 10
-
-                    spacing: 16
-
-                    Text { text: "Clients: " + compositor.items.length; color: "#94a3b8"; font.pixelSize: 12 }
-
-                    Text { text: "Socket: " + compositor.socketName; color: "#64748b"; font.pixelSize: 12 }
-
-                }
-
-            }
-
-        }
-
-    }
-
 }
