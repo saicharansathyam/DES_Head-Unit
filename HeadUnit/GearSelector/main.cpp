@@ -8,13 +8,13 @@
 
 int main(int argc, char *argv[])
 {
-    // Set Wayland environment BEFORE creating QGuiApplication
+    // GearSelector runs as Wayland client (connects to IVI_Compositor)
     qputenv("QT_QPA_PLATFORM", "wayland");
     
     if (qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")) {
         qputenv("WAYLAND_DISPLAY", "wayland-1");
     }
-    
+
     qputenv("QT_LOGGING_RULES", "qt.qpa.wayland*=true");
     
     QGuiApplication app(argc, argv);

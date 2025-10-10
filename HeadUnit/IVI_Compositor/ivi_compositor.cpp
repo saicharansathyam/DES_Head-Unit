@@ -151,49 +151,65 @@ QString ivi_compositor::findExecutable(const QString &appName)
 
 void ivi_compositor::launchGearSelector()
 {
-    if (m_gearSelectorProcess->state() != QProcess::NotRunning) {
-        qDebug() << "GearSelector is already running";
-        return;
+    if (!m_gearSelectorProcess) {
+        m_gearSelectorProcess = new QProcess(this);
+        
+        // Set up environment for the client process
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert("QT_QPA_PLATFORM", "wayland");
+        env.insert("WAYLAND_DISPLAY", "wayland-1");
+        env.insert("XDG_RUNTIME_DIR", qgetenv("XDG_RUNTIME_DIR"));
+        env.insert("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
+        
+        m_gearSelectorProcess->setProcessEnvironment(env);
+        
+        connect(m_gearSelectorProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, &ivi_compositor::onGearSelectorFinished);
+        connect(m_gearSelectorProcess, &QProcess::errorOccurred,
+                this, &ivi_compositor::onGearSelectorError);
     }
     
-    /*QString executable = findExecutable("GearSelector");
-    if (executable.isEmpty()) {
-        qWarning() << "Cannot find GearSelector executable";
-        return;
-    }*/
-    
-    qDebug() << "Launching GearSelector: /home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit/GearSelector/build/Desktop_Qt_6_8_3-Debug"; //<< executable;
-    //m_gearSelectorProcess->start(executable, QStringList());
-    m_gearSelectorProcess->start("/home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit/GearSelector/build/Desktop_Qt_6_8_3-Debug/GearSelector");
-    
-    if (!m_gearSelectorProcess->waitForStarted(3000)) {
-        qWarning() << "Failed to start GearSelector:" << m_gearSelectorProcess->errorString();
-    } else {
-        qDebug() << "GearSelector launched successfully";
+    if (m_gearSelectorProcess->state() == QProcess::NotRunning) {
+        qDebug() << "Launching GearSelector:";
+        m_gearSelectorProcess->start("/usr/bin/GearSelector");
+        
+        if (m_gearSelectorProcess->waitForStarted(3000)) {
+            qDebug() << "GearSelector launched successfully";
+        } else {
+            qWarning() << "Failed to start GearSelector:" << m_gearSelectorProcess->errorString();
+        }
     }
 }
 
 void ivi_compositor::launchMediaPlayer()
 {
-    if (m_mediaPlayerProcess->state() != QProcess::NotRunning) {
-        qDebug() << "MediaPlayer is already running";
-        return;
+    if (!m_mediaPlayerProcess) {
+        m_mediaPlayerProcess = new QProcess(this);
+        
+        // Set up environment for the client process
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert("QT_QPA_PLATFORM", "wayland");
+        env.insert("WAYLAND_DISPLAY", "wayland-1");
+        env.insert("XDG_RUNTIME_DIR", qgetenv("XDG_RUNTIME_DIR"));
+        env.insert("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
+        
+        m_mediaPlayerProcess->setProcessEnvironment(env);
+        
+        connect(m_mediaPlayerProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, &ivi_compositor::onMediaPlayerFinished);
+        connect(m_mediaPlayerProcess, &QProcess::errorOccurred,
+                this, &ivi_compositor::onMediaPlayerError);
     }
     
-    /*QString executable = findExecutable("MediaPlayer");
-    if (executable.isEmpty()) {
-        qWarning() << "Cannot find MediaPlayer executable";
-        return;
-    }*/
-    
-    qDebug() << "Launching MediaPlayer: "; // << executable;
-    //m_mediaPlayerProcess->start(executable, QStringList());
-    m_mediaPlayerProcess->start("/home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit/MediaPlayer/build/Desktop_Qt_6_8_3-Debug/MediaPlayer");
-    
-    if (!m_mediaPlayerProcess->waitForStarted(3000)) {
-        qWarning() << "Failed to start MediaPlayer:" << m_mediaPlayerProcess->errorString();
-    } else {
-        qDebug() << "MediaPlayer launched successfully";
+    if (m_mediaPlayerProcess->state() == QProcess::NotRunning) {
+        qDebug() << "Launching MediaPlayer:";
+        m_mediaPlayerProcess->start("/usr/bin/MediaPlayer");
+        
+        if (m_mediaPlayerProcess->waitForStarted(3000)) {
+            qDebug() << "MediaPlayer launched successfully";
+        } else {
+            qWarning() << "Failed to start MediaPlayer:" << m_mediaPlayerProcess->errorString();
+        }
     }
 }
 
