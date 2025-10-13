@@ -6,8 +6,8 @@ import QtQuick.Dialogs
 
 ApplicationWindow {
     id: root
-    width: 1000
-    height: 600
+    width: Screen.width
+    height: Screen.height
     //flags: Qt.FramelessWindowHint
     visible: true
     title: "MediaPlayer"
