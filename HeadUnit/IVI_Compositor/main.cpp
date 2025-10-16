@@ -20,6 +20,8 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("applicationDirPath", app.applicationDirPath());
+    // Ensure the application directory is on the QML import path so loadFromModule can find the local module
+    engine.addImportPath(app.applicationDirPath());
 
     // >>> CHANGE HERE: load by module URI + type name
     engine.loadFromModule("IVI_Compositor", "Main");

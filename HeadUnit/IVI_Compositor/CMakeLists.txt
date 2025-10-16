@@ -31,6 +31,8 @@ qt_add_qml_module(appIVI_Compositor
     VERSION 1.0
     QML_FILES
         Main.qml
+        RightPanel.qml
+        QML_FILES LeftPanel.qml
 )
 
 set_target_properties(appIVI_Compositor PROPERTIES

@@ -5,8 +5,8 @@ import GearSelector 1.0
 
 ApplicationWindow {
     id: root
-    width: Screen.width
-    height: Screen.height
+    width: 200
+    height: 600
     flags: Qt.FramelessWindowHint
     visible: true
     title: "GearSelector"

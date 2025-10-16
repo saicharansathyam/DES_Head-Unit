@@ -16,10 +16,12 @@ int main(int argc, char *argv[])
     }
     
     qputenv("QT_LOGGING_RULES", "qt.qpa.wayland*=true");
+
+    QCoreApplication::setApplicationName("GearSelector");   // app_id candidate
     
     QGuiApplication app(argc, argv);
-    app.setApplicationName("GearSelector");
-    app.setOrganizationName("HeadUnit");
+    // app.setApplicationName("GearSelector");
+    // app.setOrganizationName("HeadUnit");
     
     // Register the GearHandler type for QML
     qmlRegisterType<GS_Handler>("GearSelector", 1, 0, "GearHandler");
