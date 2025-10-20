@@ -1,39 +1,48 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
 #include <QtWaylandCompositor>
+#include <QQuickView>
 #include <QDebug>
-#include "ivi_compositor.h"
 
 int main(int argc, char *argv[])
 {
-    qputenv("QT_QPA_PLATFORM", "wayland");
+    // DO NOT set QT_QPA_PLATFORM=wayland for the compositor!
+    // The compositor creates a Wayland server, it doesn't connect to one
+    // It should use the native platform (X11, eglfs, etc.)
+
+    // Only disable window decorations if needed
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-    qputenv("QT_LOGGING_RULES", "qt.waylandcompositor.*=true");
 
     QGuiApplication app(argc, argv);
-    app.setApplicationName("IVI_Compositor");
-    app.setOrganizationName("HeadUnit");
-    ivi_compositor Comp;
 
-    qmlRegisterType<ivi_compositor>("IVI_Compositor", 1, 0, "IVICompositor");
+    // Set application metadata
+    app.setOrganizationName("HeadUnit");
+    app.setOrganizationDomain("com.headunit");
+    app.setApplicationName("HeadUnit");
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("applicationDirPath", app.applicationDirPath());
-    // Ensure the application directory is on the QML import path so loadFromModule can find the local module
-    engine.addImportPath(app.applicationDirPath());
 
-    // >>> CHANGE HERE: load by module URI + type name
-    engine.loadFromModule("IVI_Compositor", "Main");
+    qDebug() << "Starting HeadUnit Compositor...";
+    qDebug() << "Platform:" << QGuiApplication::platformName();
+
+    const QUrl url(QStringLiteral("qrc:/qml/Main.qml"));
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+                         if (!obj && url == objUrl) {
+                             qCritical() << "Failed to load compositor QML";
+                             QCoreApplication::exit(-1);
+                         }
+                     }, Qt::QueuedConnection);
+
+    engine.load(url);
+
     if (engine.rootObjects().isEmpty()) {
-        qCritical() << "Failed to load QML file";
+        qCritical() << "No root objects loaded";
         return -1;
     }
 
-    qDebug() << "IVI Compositor started successfully";
-    qDebug() << "Wayland socket name will be set by QML compositor";
-
-    Comp.setAutoLaunchClients(true);
+    qDebug() << "HeadUnit Compositor started successfully";
 
     return app.exec();
 }

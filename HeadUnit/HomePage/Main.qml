@@ -2,8 +2,6 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtLocation
-import QtPositioning
 
 Window {
     id: root
@@ -46,35 +44,11 @@ Window {
                 Layout.fillWidth: true
                 spacing: 20
 
-                // Navigation tile
-                Rectangle {
-                    id: navTile
-                    Layout.preferredWidth: 500
+                MapTile{
                     Layout.preferredHeight: 500
-                    radius: 12
-                    color: "#081028"
-                    border.color: "#264653"
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: launchApp("Navigation")
-                        hoverEnabled: true
-                    }
-
-                    Plugin {
-                        id: mapPlugin
-                        name: "osm"
-                    }
-
-                    Map{
-                        id: map
-                        anchors.fill: parent
-                        plugin: mapPlugin
-                        center: QtPositioning.coordinate(52.42445159395511, 10.79219202248994) // SEA_ME
-                        zoomLevel: 20
-                        property geoCoordinate startCentroid
-                    }
+                    Layout.preferredWidth: 500
                 }
+
 
                 // Flexible spacer
                 Item {
@@ -99,16 +73,11 @@ Window {
                             onClicked: launchApp("MediaPlayer")
                             hoverEnabled: true
                         }
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 12
-                            Image {
-                                source: "../MediaPlayer/icons/play.svg"
-                                width: 64
-                                height: 64
-                                fillMode: Image.PreserveAspectFit
-                            }
-                            Text { text: qsTr("Media Player"); color: "#e6eef8"; font.pixelSize: 18; horizontalAlignment: Text.AlignHCenter }
+                        Image {
+                            source: "qrc:/images/play.png"
+                            width: 64
+                            height: 64
+                            fillMode: Image.PreserveAspectFit
                         }
                     }
 
@@ -126,12 +95,7 @@ Window {
                             onClicked: launchApp("ThemeColor")
                             hoverEnabled: true
                         }
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 12
-                            Rectangle { width: 64; height: 64; radius: 8; color: "#1f2937" }
-                            Text { text: qsTr("Theme Selector"); color: "#e6eef8"; font.pixelSize: 18; horizontalAlignment: Text.AlignHCenter }
-                        }
+                        Text { text: qsTr("Theme Selector"); color: "#e6eef8"; font.pixelSize: 18; horizontalAlignment: Text.AlignHCenter; anchors.centerIn: parent}
                     }
                 }
             }
