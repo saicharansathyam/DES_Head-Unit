@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/Main.qml</file>
+        <file>qml/SettingsMenu.qml</file>
+        <file>qml/MenuButton.qml</file>
+        <file>qml/WiFiSettings.qml</file>
+        <file>qml/BluetoothSettings.qml</file>
+        <file>qml/SoundSettings.qml</file>
+    </qresource>
+</RCC>

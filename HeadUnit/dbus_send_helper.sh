@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-# Helper script to send D-Bus commands from compositor
+# Helper script to send D-Bus commands - POSIX compatible
 
 METHOD=$1
 PARAM=$2
@@ -35,3 +35,6 @@ case "$METHOD" in
             int32:$PARAM 2>/dev/null &
         ;;
 esac
+
+exit 0
+

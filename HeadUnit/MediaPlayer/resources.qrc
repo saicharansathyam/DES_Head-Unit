@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/Main.qml</file>
+        <file>qml/MediaControls.qml</file>
+        <file>qml/SourceSelector.qml</file>
+        <file>qml/ProgressBar.qml</file>
+        <file>qml/VolumeControl.qml</file>
+        <file>qml/MediaDisplay.qml</file>
+        <file>qml/USBPlaylist.qml</file>
+        <file>qml/YouTubeView.qml</file>
+    </qresource>
+</RCC>

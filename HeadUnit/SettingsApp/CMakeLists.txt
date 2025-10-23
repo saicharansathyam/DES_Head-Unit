@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(IVI_Compositor VERSION 1.0 LANGUAGES CXX)
+project(SettingsApp VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,43 +12,52 @@ find_package(Qt6 REQUIRED COMPONENTS
     Gui
     Qml
     Quick
-    WaylandCompositor
+    DBus
+    Bluetooth
+)
+
+# Source files
+set(SOURCES
+    main.cpp
+    settingsmanager.cpp
+    wifimanager.cpp
+    bluetoothmanager.cpp
+)
+
+# Header files
+set(HEADERS
+    settingsmanager.h
+    wifimanager.h
+    bluetoothmanager.h
 )
 
 # Create resources file
 qt_add_resources(RESOURCES qml.qrc)
 
 # Create executable
-add_executable(headUnit
-    main.cpp
+add_executable(Settings
+    ${SOURCES}
+    ${HEADERS}
     ${RESOURCES}
-    qml.qrc
-    scriptexecutor.h
 )
 
 # Link libraries
-target_link_libraries(headUnit PRIVATE
+target_link_libraries(Settings PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
-    Qt6::WaylandCompositor
+    Qt6::DBus
+    Qt6::Bluetooth
 )
 
 # Compiler flags
-target_compile_options(headUnit PRIVATE
+target_compile_options(Settings PRIVATE
     -Wall
     -Wextra
 )
 
 # Installation
-install(TARGETS headUnit
+install(TARGETS Settings
     RUNTIME DESTINATION bin
 )
-
-# Install scripts
-install(PROGRAMS
-    ${CMAKE_SOURCE_DIR}/dbus_send_helper.sh
-    DESTINATION share/headunit
-)
-

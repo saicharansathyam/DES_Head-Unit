@@ -6,7 +6,7 @@ QtObject {
 
     property var compositor
     property var activeSurfaces: ({})
-    property int currentRightApp: 1000  // Default to HomePage
+    property int currentRightApp: 1000
     property int activeSurfaceCount: 0
 
     signal surfaceCreatedForLeft(var surface, var item)
@@ -18,14 +18,27 @@ QtObject {
             id: surfaceItem
             property int iviId: shellSurface ? shellSurface.iviId : 0
 
-            // Set proper width based on panel
-            width: iviId === 1001 ? 300 : 724
-            height: 600
+            // IMPORTANT: Set explicit initial size to avoid -1 values
+            Component.onCompleted: {
+                // Set size based on IVI-ID BEFORE any other operations
+                if (iviId === 1001) {
+                    width = 200
+                    height = 440
+                } else {
+                    width = 824
+                    height = 550
+                }
 
-            // Note: sizeFollowsSurface doesn't exist - removed
+                console.log("ShellSurfaceItem: Initial size set for IVI-ID", iviId, ":", width, "x", height)
+
+                // Now send configure to client
+                if (shellSurface) {
+                    shellSurface.sendConfigure(Qt.size(width, height))
+                }
+            }
 
             visible: {
-                if (iviId === 1001) return true  // GearSelector always visible
+                if (iviId === 1001) return true
                 return iviId === surfaceManager.currentRightApp
             }
 
@@ -43,35 +56,26 @@ QtObject {
                 destroy()
             }
 
-            Component.onCompleted: {
-                console.log("ShellSurfaceItem created for IVI-ID", iviId,
-                           "Size:", width, "x", height)
-
-                if (shellSurface) {
-                    shellSurface.sendConfigure(Qt.size(width, height))
-                }
-            }
-
             onWidthChanged: {
-                if (shellSurface) {
+                if (shellSurface && width > 0) {
+                    console.log("Width changed for IVI-ID", iviId, "to", width)
                     shellSurface.sendConfigure(Qt.size(width, height))
                 }
             }
 
             onHeightChanged: {
-                if (shellSurface) {
+                if (shellSurface && height > 0) {
+                    console.log("Height changed for IVI-ID", iviId, "to", height)
                     shellSurface.sendConfigure(Qt.size(width, height))
                 }
             }
         }
     }
 
-    // Check if application is running
     function isAppRunning(iviId) {
         return activeSurfaces.hasOwnProperty(iviId)
     }
 
-    // Get application surface item
     function getAppSurfaceItem(iviId) {
         if (activeSurfaces[iviId]) {
             return activeSurfaces[iviId].item
@@ -79,7 +83,6 @@ QtObject {
         return null
     }
 
-    // Get application surface
     function getAppSurface(iviId) {
         if (activeSurfaces[iviId]) {
             return activeSurfaces[iviId].surface
@@ -112,12 +115,10 @@ QtObject {
         } else {
             surfaceCreatedForRight(iviSurface, item)
 
-            // Auto-switch to newly launched app if no app is currently shown
             if (currentRightApp === 0 || !activeSurfaces[currentRightApp]) {
                 console.log("Auto-switching to newly launched app:", iviId)
                 currentRightApp = iviId
             } else {
-                // Switch to the newly launched app
                 console.log("Switching to newly launched app:", iviId)
                 switchToApplication(iviId)
             }
@@ -127,19 +128,16 @@ QtObject {
     function switchToApplication(targetAppId) {
         console.log("SurfaceManager: Switching to app:", targetAppId)
 
-        // Check if already showing this app
         if (currentRightApp === targetAppId) {
             console.log("Already showing app:", targetAppId)
             return true
         }
 
-        // Check if app is running
         if (!activeSurfaces[targetAppId]) {
             console.warn("Cannot switch - app not running:", targetAppId)
             return false
         }
 
-        // Hide current app
         if (activeSurfaces[currentRightApp]) {
             var currentItem = activeSurfaces[currentRightApp].item
             if (currentItem) {
@@ -149,7 +147,6 @@ QtObject {
             }
         }
 
-        // Show target app
         var targetItem = activeSurfaces[targetAppId].item
         if (targetItem) {
             console.log("Showing target app:", targetAppId)
@@ -157,7 +154,6 @@ QtObject {
             targetItem.focus = true
             targetItem.forceActiveFocus()
 
-            // Ensure proper size is sent
             if (targetItem.shellSurface) {
                 targetItem.shellSurface.sendConfigure(
                     Qt.size(targetItem.width, targetItem.height)
@@ -177,15 +173,12 @@ QtObject {
             delete activeSurfaces[iviId]
             activeSurfaceCount = Object.keys(activeSurfaces).length
 
-            // If the destroyed app was the current one, switch to another
             if (iviId === currentRightApp) {
                 console.log("Current app destroyed, switching to fallback")
 
-                // Try HomePage first
                 if (activeSurfaces[1000]) {
                     switchToApplication(1000)
                 } else {
-                    // Otherwise find first available
                     var firstApp = findFirstAvailableApp()
                     if (firstApp !== 0) {
                         switchToApplication(firstApp)
@@ -201,7 +194,6 @@ QtObject {
     }
 
     function findFirstAvailableApp() {
-        // Priority order: HomePage, MediaPlayer, others
         var priority = [1000, 1002, 1003, 1004, 1005]
 
         for (var i = 0; i < priority.length; i++) {
@@ -212,7 +204,6 @@ QtObject {
             }
         }
 
-        // If priority apps not found, return any available app
         for (var id in activeSurfaces) {
             var appId = parseInt(id)
             if (appId !== 1001 && appId !== 0) {
@@ -224,12 +215,11 @@ QtObject {
         return 0
     }
 
-    // Get list of running applications
     function getRunningApps() {
         var running = []
         for (var id in activeSurfaces) {
             var appId = parseInt(id)
-            if (appId !== 1001) {  // Exclude GearSelector
+            if (appId !== 1001) {
                 running.push(appId)
             }
         }

@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-# Enhanced application launcher for HeadUnit
+# Enhanced application launcher - POSIX compatible
 
 if [ $# -lt 1 ]; then
     echo "Usage: $0 <app_name|ivi_id>"
@@ -11,49 +11,44 @@ if [ $# -lt 1 ]; then
     echo "  MediaPlayer    1002"
     echo "  ThemeColor     1003"
     echo "  Navigation     1004"
-    echo "  YouTube        1005"
-    echo ""
-    echo "Examples:"
-    echo "  $0 HomePage"
-    echo "  $0 1000"
-    echo "  $0 MediaPlayer"
+    echo "  Settings       1005"
     exit 1
 fi
-
-# Application mapping
-declare -A APP_IDS
-APP_IDS[HomePage]=1000
-APP_IDS[GearSelector]=1001
-APP_IDS[MediaPlayer]=1002
-APP_IDS[ThemeColor]=1003
-APP_IDS[Navigation]=1004
-APP_IDS[YouTube]=1005
-
-# Reverse mapping
-declare -A APP_NAMES
-APP_NAMES[1000]="HomePage"
-APP_NAMES[1001]="GearSelector"
-APP_NAMES[1002]="MediaPlayer"
-APP_NAMES[1003]="ThemeColor"
-APP_NAMES[1004]="Navigation"
-APP_NAMES[1005]="YouTube"
 
 INPUT="$1"
 APP_DIR="./applications"
 
 # Determine IVI-ID and app name
-if [[ "$INPUT" =~ ^[0-9]+$ ]]; then
-    IVI_ID="$INPUT"
-    APP_NAME="${APP_NAMES[$IVI_ID]}"
-else
-    APP_NAME="$INPUT"
-    IVI_ID="${APP_IDS[$APP_NAME]}"
-fi
-
-if [ -z "$IVI_ID" ] || [ -z "$APP_NAME" ]; then
-    echo "Error: Unknown application '$INPUT'"
-    exit 1
-fi
+case "$INPUT" in
+    HomePage|1000)
+        IVI_ID=1000
+        APP_NAME="HomePage"
+        ;;
+    GearSelector|1001)
+        IVI_ID=1001
+        APP_NAME="GearSelector"
+        ;;
+    MediaPlayer|1002)
+        IVI_ID=1002
+        APP_NAME="MediaPlayer"
+        ;;
+    ThemeColor|1003)
+        IVI_ID=1003
+        APP_NAME="ThemeColor"
+        ;;
+    Navigation|1004)
+        IVI_ID=1004
+        APP_NAME="Navigation"
+        ;;
+    Settings|1005)
+        IVI_ID=1005
+        APP_NAME="Settings"
+        ;;
+    *)
+        echo "Error: Unknown application '$INPUT'"
+        exit 1
+        ;;
+esac
 
 APP_PATH="$APP_DIR/$APP_NAME"
 
@@ -62,7 +57,7 @@ if [ ! -f "$APP_PATH" ]; then
     exit 1
 fi
 
-# Use D-Bus if lifecycle manager is running
+# Check if lifecycle manager is running
 if dbus-send --session --dest=com.headunit.AppLifecycle \
     --print-reply /com/headunit/AppLifecycle \
     org.freedesktop.DBus.Peer.Ping 2>/dev/null; then
@@ -78,11 +73,12 @@ else
     # Direct launch
     echo "Launching $APP_NAME directly (IVI-ID: $IVI_ID)..."
     
-    export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp}
-    export QT_WAYLAND_SHELL_INTEGRATION=ivi-shell
-    export QT_IVI_SURFACE_ID=$IVI_ID
-    export QT_QPA_PLATFORM=wayland
-    export WAYLAND_DISPLAY=wayland-1
+    XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/tmp}
+    QT_WAYLAND_SHELL_INTEGRATION=ivi-shell
+    QT_IVI_SURFACE_ID=$IVI_ID
+    QT_QPA_PLATFORM=wayland
+    WAYLAND_DISPLAY=wayland-1
+    export XDG_RUNTIME_DIR QT_WAYLAND_SHELL_INTEGRATION QT_IVI_SURFACE_ID QT_QPA_PLATFORM WAYLAND_DISPLAY
     
     exec "$APP_PATH"
 fi

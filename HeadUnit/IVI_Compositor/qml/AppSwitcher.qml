@@ -154,7 +154,7 @@ Rectangle {
             onClicked: switchToApp(1004)
         }
 
-        // YouTube Button
+        // Settings Button
         Button {
             width: 100
             height: 50
@@ -172,14 +172,14 @@ Rectangle {
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "▶"
+                    text: "⚙"
                     color: "white"
                     font.pixelSize: 20
                 }
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "YouTube"
+                    text: "Settings"
                     color: "white"
                     font.pixelSize: 11
                 }
