@@ -139,9 +139,22 @@ Window {
                         property color buttonColor: model.color
 
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 55
+                        Layout.preferredHeight: 65
                         enabled: gearHandler.isConnected
                         opacity: enabled ? 1.0 : 0.5
+
+                        // Touch-specific properties
+                        property bool touchActive: false
+
+                        // Add haptic-like visual feedback
+                        scale: pressed ? 0.97 : 1.0
+
+                        Behavior on scale {
+                            NumberAnimation {
+                                duration: 80
+                                easing.type: Easing.OutCubic
+                            }
+                        }
 
                         background: Rectangle {
                             color: parent.isSelected ? parent.buttonColor : "#1f2937"
