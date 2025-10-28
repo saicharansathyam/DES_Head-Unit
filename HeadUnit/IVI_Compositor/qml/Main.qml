@@ -1,3 +1,4 @@
+// Main.qml
 import QtQuick
 import QtQuick.Window
 import QtWayland.Compositor
@@ -5,7 +6,6 @@ import QtWayland.Compositor.IviApplication
 
 WaylandCompositor {
     id: waylandCompositor
-
     socketName: "wayland-1"
 
     // IVI Application extension
@@ -15,7 +15,9 @@ WaylandCompositor {
         onIviSurfaceCreated: function(iviSurface) {
             console.log("IVI Surface created with ID:", iviSurface.iviId)
             surfaceManager.handleNewSurface(iviSurface)
-            notifyAppConnected(iviSurface.iviId)
+
+            // Notify AFM via native D-Bus (not shell script)
+            dbusManager.notifyAppConnected(iviSurface.iviId)
         }
     }
 
@@ -34,7 +36,32 @@ WaylandCompositor {
 
         onSurfaceDestroyed: function(iviId) {
             console.log("Surface destroyed:", iviId)
-            notifyAppDisconnected(iviId)
+            dbusManager.notifyAppDisconnected(iviId)
+        }
+    }
+
+    // Connect to AFM signals
+    Connections {
+        target: dbusManager
+
+        function onAppLaunched(iviId, runId) {
+            console.log("[Compositor] AFM launched app:", iviId, "RunID:", runId)
+            // Surface will arrive via IVI protocol
+        }
+
+        function onAppTerminated(iviId) {
+            console.log("[Compositor] AFM terminated app:", iviId)
+            // Surface destruction handled by surfaceManager
+        }
+
+        function onAppStateChanged(iviId, state) {
+            console.log("[Compositor] App state changed:", iviId, "->", state)
+
+            // If app became "active", bring to foreground
+            if (state === "active" && surfaceManager.isAppRunning(iviId)) {
+                console.log("[Compositor] Activating app surface:", iviId)
+                surfaceManager.switchToApplication(iviId)
+            }
         }
     }
 
@@ -46,7 +73,6 @@ WaylandCompositor {
 
         window: Window {
             id: mainWindow
-
             property alias leftPanel: leftPanelItem
             property alias rightPanel: rightPanelItem
 
@@ -95,17 +121,14 @@ WaylandCompositor {
                         console.log("Is app running?", isRunning)
 
                         if (isRunning) {
-                            console.log("App is running - switching to surface")
-                            var success = surfaceManager.switchToApplication(appId)
-
-                            if (success) {
-                                console.log("Successfully switched to", appName)
-                            } else {
-                                console.error("Failed to switch to", appName)
-                            }
+                            console.log("App is running - activating via AFM")
+                            // Request activation through AFM for proper window management
+                            dbusManager.activateApp(appId)
+                            // AFM will signal back with appStateChanged("active")
+                            // which will trigger surfaceManager.switchToApplication
                         } else {
-                            console.log("App not running - requesting launch via D-Bus")
-                            requestAppLaunch(appId)
+                            console.log("App not running - requesting launch via AFM")
+                            dbusManager.launchApp(appId)
                             console.log("Launch requested for", appName)
                         }
 
@@ -113,15 +136,16 @@ WaylandCompositor {
                     }
                 }
 
-                // Status overlay (updated position to avoid Clock)
+                // Status overlay
                 Rectangle {
                     anchors.top: parent.top
                     anchors.right: parent.right
                     anchors.margins: 5
-                    width: 180
-                    height: 80
+                    width: 200
+                    height: 100
                     color: "#80000000"
                     radius: 5
+                    visible: dbusManager.afmConnected
 
                     Column {
                         anchors.centerIn: parent
@@ -129,9 +153,15 @@ WaylandCompositor {
 
                         Text {
                             text: "HeadUnit"
-                            color: "#00ff00"
+                            color: dbusManager.afmConnected ? "#00ff00" : "#ff0000"
                             font.pixelSize: 12
                             font.bold: true
+                        }
+
+                        Text {
+                            text: "AFM: " + (dbusManager.afmConnected ? "Connected" : "Disconnected")
+                            color: "white"
+                            font.pixelSize: 9
                         }
 
                         Text {
@@ -153,42 +183,7 @@ WaylandCompositor {
 
     defaultOutput: output
 
-    // Public function to update temperature from external source
-    function updateTemperature(temp) {
-        if (output.window.leftPanel) {
-            output.window.leftPanel.setTemperature(temp)
-        }
-    }
-
-    // Public function to set time format
-    function setTimeFormat(is24Hour) {
-        if (output.window.leftPanel) {
-            output.window.leftPanel.setTimeFormat(is24Hour)
-        }
-    }
-
-    // D-Bus communication functions
-    function notifyAppConnected(iviId) {
-        console.log("Notifying app connected:", iviId)
-        if (typeof scriptExecutor !== 'undefined') {
-            scriptExecutor.executeDBusCall("AppConnected", iviId)
-        }
-    }
-
-    function notifyAppDisconnected(iviId) {
-        console.log("Notifying app disconnected:", iviId)
-        if (typeof scriptExecutor !== 'undefined') {
-            scriptExecutor.executeDBusCall("AppDisconnected", iviId)
-        }
-    }
-
-    function requestAppLaunch(iviId) {
-        console.log("Requesting app launch:", iviId)
-        if (typeof scriptExecutor !== 'undefined') {
-            scriptExecutor.executeDBusCall("LaunchApp", iviId)
-        }
-    }
-
+    // Helper functions
     function getAppName(iviId) {
         var names = {
             1000: "HomePage",
@@ -196,7 +191,7 @@ WaylandCompositor {
             1002: "MediaPlayer",
             1003: "ThemeColor",
             1004: "Navigation",
-            1005: "YouTube"
+            1005: "Settings"
         }
         return names[iviId] || "None"
     }
@@ -207,6 +202,7 @@ WaylandCompositor {
         console.log("Resolution: 1024x600")
         console.log("Left panel: 200px (Clock + Temp + Gear)")
         console.log("Right panel: 824px")
+        console.log("AFM Connected:", dbusManager.afmConnected)
         console.log("=================================")
     }
 }
