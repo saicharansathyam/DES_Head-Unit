@@ -1,0 +1,4 @@
+module ThemeColor
+singleton ColorUtils 1.0 ColorUtils.qml
+ColorWheel 1.0 ColorWheel.qml
+PreviewButton 1.0 PreviewButton.qml

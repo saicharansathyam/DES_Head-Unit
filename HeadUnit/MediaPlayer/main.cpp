@@ -1,35 +1,54 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QtWebView/QtWebView>
+#include <QQuickStyle>
+#include <QDebug>
 #include "mp_handler.h"
 
 int main(int argc, char *argv[])
 {
-    // CRITICAL: Enable touch synthesis
-    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents, true);
-    QGuiApplication::setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents, true);
+    // IMPORTANT: Enable virtual keyboard BEFORE creating QGuiApplication
+    qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
 
+    // Initialize QtWebView
+    QtWebView::initialize();
+
+    // Set Wayland environment
     qputenv("QT_QPA_PLATFORM", "wayland");
-    qputenv("WAYLAND_DISPLAY", "wayland-1");
-    qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-    
-    // DEBUG
-    qputenv("QT_LOGGING_RULES", "qt.qpa.input*=true");
+    if (qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")) {
+        qputenv("WAYLAND_DISPLAY", "wayland-1");
+    }
 
+    QQuickStyle::setStyle("Fusion");
     QGuiApplication app(argc, argv);
-    app.setApplicationName("MediaPlayer");
 
-    MP_Handler mpHandler;
+    app.setApplicationName("MediaPlayer");
+    app.setOrganizationName("HeadUnit");
+
+    MP_Handler handler;
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("mpHandler", &mpHandler);
-    
-    engine.load(QUrl(QStringLiteral("qrc:/Main_Test.qml")));
-    
+    engine.rootContext()->setContextProperty("mpHandler", &handler);
+
+    // Load Main.qml from resources
+    const QUrl url(QStringLiteral("qrc:/qml/Main.qml"));
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+                         if (!obj && url == objUrl) {
+                             qCritical() << "Failed to load QML";
+                             QCoreApplication::exit(-1);
+                         }
+                     }, Qt::QueuedConnection);
+
+    engine.load(url);
+
     if (engine.rootObjects().isEmpty()) {
-        qCritical() << "Failed to load QML";
+        qCritical() << "No root objects loaded";
         return -1;
     }
 
+    qDebug() << "MediaPlayer with QtWebView and Virtual Keyboard started successfully";
     return app.exec();
 }

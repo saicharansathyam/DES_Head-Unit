@@ -1,39 +1,44 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QtWaylandCompositor>
-#include <QQuickView>
 #include <QDebug>
-#include "scriptexecutor.h"
+
+#include "settingsmanager.h"
+#include "wifimanager.h"
+#include "bluetoothmanager.h"
 
 int main(int argc, char *argv[])
 {
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
+    qputenv("QT_IVI_SURFACE_ID", "1005");  // IVI ID for Settings App
 
     QGuiApplication app(argc, argv);
 
     app.setOrganizationName("HeadUnit");
     app.setOrganizationDomain("com.headunit");
-    app.setApplicationName("HeadUnit");
+    app.setApplicationName("SettingsApp");
 
-    // Create script executor
-    ScriptExecutor scriptExecutor;
+    // Create managers
+    WiFiManager wifiManager;
+    BluetoothManager bluetoothManager;
+    SettingsManager settingsManager(&wifiManager, &bluetoothManager);
 
     QQmlApplicationEngine engine;
 
-    // Expose script executor to QML
-    engine.rootContext()->setContextProperty("scriptExecutor", &scriptExecutor);
+    // Expose managers to QML
+    engine.rootContext()->setContextProperty("settingsManager", &settingsManager);
+    engine.rootContext()->setContextProperty("wifiManager", &wifiManager);
+    engine.rootContext()->setContextProperty("bluetoothManager", &bluetoothManager);
 
-    qDebug() << "Starting HeadUnit Compositor...";
-    qDebug() << "Platform:" << QGuiApplication::platformName();
-    qDebug() << "Current directory:" << QDir::currentPath();
+    qDebug() << "Starting Settings Application...";
+    qDebug() << "IVI Surface ID: 1006";
 
     const QUrl url(QStringLiteral("qrc:/qml/Main.qml"));
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
                          if (!obj && url == objUrl) {
-                             qCritical() << "Failed to load compositor QML";
+                             qCritical() << "Failed to load Settings QML";
                              QCoreApplication::exit(-1);
                          }
                      }, Qt::QueuedConnection);
@@ -45,7 +50,8 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    qDebug() << "HeadUnit Compositor started successfully";
+    qDebug() << "Settings Application started successfully";
 
     return app.exec();
 }
+

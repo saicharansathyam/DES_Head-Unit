@@ -5,37 +5,36 @@
 
 int main(int argc, char *argv[])
 {
-    // CRITICAL: Enable touch-to-mouse synthesis
-    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents, true);
-    
-    // CRITICAL: Also enable mouse-to-touch (some systems need this)
-    QGuiApplication::setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents, true);
-
-    qputenv("QT_QPA_PLATFORM", "wayland");
-    qputenv("WAYLAND_DISPLAY", "wayland-1");
-    qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-    
-    // DEBUG: Enable input debugging
-    qputenv("QT_LOGGING_RULES", "qt.qpa.input*=true");
+    // Don't set QT_QPA_PLATFORM here - it should come from environment
+    // when launched by the lifecycle manager
 
     QGuiApplication app(argc, argv);
+
+    app.setOrganizationName("HeadUnit");
     app.setApplicationName("GearSelector");
 
-    // Create handler
-    GS_Handler gsHandler;
+    // Register GearHandler type
+    qmlRegisterType<GS_Handler>("GearSelector", 1, 0, "GearHandler");
 
     QQmlApplicationEngine engine;
-    
-    // CRITICAL: Register handler with QML
-    engine.rootContext()->setContextProperty("gsHandler", &gsHandler);
-    
-    // Load the TEST QML
-    engine.load(QUrl(QStringLiteral("qrc:/Main_Test.qml")));
-    
+
+    const QUrl url(QStringLiteral("qrc:/Main.qml"));
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+                         if (!obj && url == objUrl) {
+                             QCoreApplication::exit(-1);
+                         }
+                     }, Qt::QueuedConnection);
+
+    engine.load(url);
+
     if (engine.rootObjects().isEmpty()) {
-        qCritical() << "Failed to load QML";
         return -1;
     }
+
+    qDebug() << "GearSelector application started";
+    qDebug() << "Platform:" << QGuiApplication::platformName();
 
     return app.exec();
 }
