@@ -1,24 +1,33 @@
-SUMMARY = "MediaPlayer Qt6 Application"
+SUMMARY = "Media Player Application"
+DESCRIPTION = "Media player UI for the head unit"
 LICENSE = "CLOSED"
 
-DEPENDS = "qtbase qtdeclarative qtmultimedia qtbase-native qtdeclarative-native"
+# Qt6 dependencies:
+# - qtbase (includes Qt6::DBus when built with dbus PACKAGECONFIG)
+# - qtdeclarative (Qt Quick/QML for target)
+# - qtdeclarative-native (Qt6QuickTools for build host)
+# - qtwayland (Wayland protocol support)
+# - qtmultimedia (Media playback)
+DEPENDS = "qtbase qtdeclarative qtdeclarative-native qtwayland qtmultimedia"
 
-SRC_URI = "git:///workspace/HeadUnit;protocol=file;branch=Working-compositor"
-SRCREV = "${AUTOREV}"
+SRC_URI = "file://main.cpp \
+           file://mp_handler.cpp \
+           file://mp_handler.h \
+           file://CMakeLists.txt \
+           file://Main.qml \
+           file://Main_Test.qml \
+          "
 
-S = "${WORKDIR}/git/MediaPlayer"
+S = "${WORKDIR}"
 
-inherit cmake
-
-EXTRA_OECMAKE += " \
-    -DQT_HOST_PATH=${STAGING_DIR_NATIVE}${prefix} \
-    -DQT_HOST_PATH_CMAKE_DIR=${STAGING_DIR_NATIVE}${libdir}/cmake \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
-"
-
-FILES:${PN} += "${bindir}/*"
+inherit qt6-cmake
 
 do_install() {
     install -d ${D}${bindir}
     install -m 0755 ${B}/MediaPlayer ${D}${bindir}/
 }
+
+FILES:${PN} = "${bindir}/MediaPlayer"
+
+# Runtime dependencies
+RDEPENDS:${PN} += "qtbase qtdeclarative qtwayland qtmultimedia"

@@ -1,0 +1,32 @@
+// Enhanced focus helper with pointer enter event
+void ivi_compositor::grantFocus(QWaylandQuickSurface *surface)
+{
+    if (!surface) {
+        qWarning() << "grantFocus: null surface!";
+        return;
+    }
+    
+    if (auto *seat = defaultSeat()) {
+        qDebug() << "=== GRANTING FOCUS TO SURFACE ===" << surface;
+        
+        // Set keyboard focus
+        seat->setKeyboardFocus(surface);
+        
+        // Set mouse focus - need to get the view from the surface
+        if (!surface->views().isEmpty()) {
+            QWaylandView *view = surface->views().first();
+            seat->setMouseFocus(view);
+            
+            // CRITICAL: Also send a pointer enter event
+            QPointF localPos(surface->destinationSize().width() / 2, 
+                            surface->destinationSize().height() / 2);
+            seat->sendMouseMoveEvent(view, localPos, localPos);
+            
+            qDebug() << "Input focus granted successfully";
+        } else {
+            qWarning() << "Surface has no views!";
+        }
+    } else {
+        qWarning() << "No seat available to set focus!";
+    }
+}

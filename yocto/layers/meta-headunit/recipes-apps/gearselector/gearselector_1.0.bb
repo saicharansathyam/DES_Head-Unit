@@ -1,24 +1,22 @@
-SUMMARY = "GearSelector Qt6 Application"
+SUMMARY = "Minimal GearSelector Touch Test"
+DESCRIPTION = "Touch input test application"
 LICENSE = "CLOSED"
 
-DEPENDS = "qtbase qtdeclarative qtbase-native qtdeclarative-native"
+DEPENDS = "qtbase qtdeclarative qtdeclarative-native"
+RDEPENDS:${PN} += "qtbase qtdeclarative qtwayland qtwayland-plugins"
 
-SRC_URI = "git:///workspace/HeadUnit;protocol=file;branch=Working-compositor"
-SRCREV = "${AUTOREV}"
+SRC_URI = "file://main.cpp \
+           file://CMakeLists.txt \
+           file://Main_Test.qml \
+          "
 
-S = "${WORKDIR}/git/GearSelector"
+S = "${WORKDIR}"
 
-inherit cmake
-
-EXTRA_OECMAKE += " \
-    -DQT_HOST_PATH=${STAGING_DIR_NATIVE}${prefix} \
-    -DQT_HOST_PATH_CMAKE_DIR=${STAGING_DIR_NATIVE}${libdir}/cmake \
-    -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
-"
-
-FILES:${PN} += "${bindir}/*"
+inherit qt6-cmake
 
 do_install() {
     install -d ${D}${bindir}
     install -m 0755 ${B}/GearSelector ${D}${bindir}/
 }
+
+FILES:${PN} = "${bindir}/GearSelector"

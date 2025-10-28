@@ -1,109 +1,109 @@
-# --- meta-headunit: headunit-image.bb ---
+require recipes-core/images/core-image-base.bb
 
-SUMMARY = "Head Unit Custom Image for Raspberry Pi 4"
+SUMMARY = "HeadUnit Custom Linux Image - Complete"
+DESCRIPTION = "Full-featured IVI system with fonts, touch, and D-Bus mock service"
 LICENSE = "MIT"
 
-inherit core-image
-
-IMAGE_FEATURES += " ssh-server-openssh splash"
-
+# ====================================
+# Qt6 packages
+# ====================================
 IMAGE_INSTALL:append = " \
-    packagegroup-core-boot \
     qtbase \
-    qtdeclarative \
-    qtwayland \
-    qtmultimedia \
     qtbase-plugins \
-    gearselector \
-    mediaplayer \
-    ivi-compositor \
-    themecolor \
+    qtbase-tools \
+    qtdeclarative \
+    qtdeclarative-plugins \
+    qtdeclarative-tools \
+    qtwayland \
+    qtwayland-plugins \
+    qtmultimedia \
+    qtmultimedia-plugins \
+    qtsvg \
 "
 
-# ===== Wi-Fi autoconnect configuration =====
-# Regulatory domain for Wi-Fi
-WIFI_COUNTRY ?= "DE"
-# SSID and PSK (override in local.conf if desired)
-WIFI_SSID    ?= "SEA:ME WiFi Access"
-WIFI_PSK     ?= "1fy0u534m3"
+# ====================================
+# HeadUnit applications
+# ====================================
+IMAGE_INSTALL:append = " \
+    ivi-compositor \
+    gearselector \
+    mediaplayer \
+    themecolor \
+    mock-dbus \
+"
 
-# Avoid regdb package conflict and install required bits
-IMAGE_INSTALL:remove = " wireless-regdb "
-IMAGE_INSTALL:append = " wpa-supplicant iw linux-firmware wireless-regdb-static "
+# ====================================
+# Fonts (CRITICAL for text rendering)
+# ====================================
+IMAGE_INSTALL:append = " \
+    fontconfig \
+    fontconfig-utils \
+    liberation-fonts \
+    ttf-dejavu-common \
+    ttf-dejavu-sans \
+    ttf-dejavu-sans-mono \
+    ttf-dejavu-serif \
+"
 
-# Ensure systemd includes networkd and resolved
-PACKAGECONFIG:append:pn-systemd = " networkd resolved"
+# ====================================
+# Touch input support
+# ====================================
+IMAGE_INSTALL:append = " \
+    libinput \
+    libinput-bin \
+    evtest \
+    tslib \
+    tslib-calibrate \
+    tslib-tests \
+"
 
-# Rootfs tweaks to enable Wi-Fi + DHCP at first boot
-ROOTFS_POSTPROCESS_COMMAND += "headunit_wifi_autosetup;"
+# ====================================
+# Python for Mock D-Bus Service
+# ====================================
+IMAGE_INSTALL:append = " \
+    python3 \
+    python3-core \
+    python3-dbus \
+    python3-pygobject \
+"
 
-python headunit_wifi_autosetup () {
-    import os
-    dget = d.getVar
-    root    = dget('IMAGE_ROOTFS')
-    ssid    = dget('WIFI_SSID') or ''
-    psk     = dget('WIFI_PSK') or ''
-    country = dget('WIFI_COUNTRY') or '00'
+# ====================================
+# D-Bus and system services
+# ====================================
+IMAGE_INSTALL:append = " \
+    dbus \
+    dbus-glib \
+"
 
-    # systemd-networkd: DHCP on wlan0
-    netdir = os.path.join(root, 'etc', 'systemd', 'network')
-    os.makedirs(netdir, exist_ok=True)
-    with open(os.path.join(netdir, 'wlan0.network'), 'w') as f:
-        f.write("[Match]\nName=wlan0\n\n[Network]\nDHCP=yes\n")
+# ====================================
+# System utilities
+# ====================================
+IMAGE_INSTALL:append = " \
+    openssh \
+    openssh-sshd \
+    openssh-sftp-server \
+    util-linux \
+    procps \
+    nano \
+    vim \
+"
 
-    # wpa_supplicant config for wlan0 (used by wpa_supplicant@wlan0.service)
-    wpadir = os.path.join(root, 'etc', 'wpa_supplicant')
-    os.makedirs(wpadir, exist_ok=True)
-    wpa_cfg = os.path.join(wpadir, 'wpa_supplicant-wlan0.conf')
-    with open(wpa_cfg, 'w') as f:
-        f.write("ctrl_interface=/var/run/wpa_supplicant\n")
-        f.write("update_config=1\n")
-        f.write("country=%s\n\n" % country)
-        f.write("network={\n")
-        f.write('    ssid="%s"\n' % ssid)
-        f.write('    psk="%s"\n' % psk)
-        f.write("    key_mgmt=WPA-PSK\n")
-        f.write("    scan_ssid=1\n")
-        f.write("    freq_list=2412 2437 2462\n")
-        f.write("}\n")
-    os.chmod(wpa_cfg, 0o600)
+# ====================================
+# Graphics and DRM
+# ====================================
+IMAGE_INSTALL:append = " \
+    mesa \
+    mesa-megadriver \
+    libdrm \
+    libdrm-tests \
+"
 
-    # Enable services
-    wants = os.path.join(root, 'etc', 'systemd', 'system', 'multi-user.target.wants')
-    os.makedirs(wants, exist_ok=True)
-    def link(unit):
-        src = '../../lib/systemd/system/' + unit
-        dst = os.path.join(wants, unit)
-        try:
-            if os.path.islink(dst) or os.path.exists(dst):
-                os.remove(dst)
-        except FileNotFoundError:
-            pass
-        os.symlink(src, dst)
+# Enable features
+IMAGE_FEATURES += "ssh-server-openssh"
+EXTRA_IMAGE_FEATURES += "debug-tweaks"
 
-    link('systemd-networkd.service')
-    link('systemd-resolved.service')
-    link('wpa_supplicant@wlan0.service')
+# Ensure Qt fontconfig support
+PACKAGECONFIG:append:pn-qtbase = " fontconfig"
 
-    # resolv.conf -> systemd-resolved stub
-    etc = os.path.join(root, 'etc')
-    resolv = os.path.join(etc, 'resolv.conf')
-    try:
-        if os.path.islink(resolv) or os.path.exists(resolv):
-            os.remove(resolv)
-    except FileNotFoundError:
-        pass
-    os.symlink('/run/systemd/resolve/stub-resolv.conf', resolv)
-
-    # Persistent regulatory domain for cfg80211
-    moddir = os.path.join(root, 'etc', 'modprobe.d')
-    os.makedirs(moddir, exist_ok=True)
-    with open(os.path.join(moddir, 'cfg80211.conf'), 'w') as f:
-        f.write("options cfg80211 ieee80211_regdom=%s\n" % country)
-}
-
-# Set root filesystem size
-IMAGE_ROOTFS_EXTRA_SPACE = "2048"
-
-# Enable WiFi and SSH
-SYSTEMD_AUTO_ENABLE = "enable"
+# Touch screen support
+DISTRO_FEATURES:append = " touchscreen"

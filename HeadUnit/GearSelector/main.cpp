@@ -1,58 +1,41 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QDebug>
-#include <QFile>
-#include <QDir>
 #include "gs_handler.h"
 
 int main(int argc, char *argv[])
 {
-    // GearSelector runs as Wayland client (connects to IVI_Compositor)
-    qputenv("QT_QPA_PLATFORM", "wayland");
+    // CRITICAL: Enable touch-to-mouse synthesis
+    QGuiApplication::setAttribute(Qt::AA_SynthesizeMouseForUnhandledTouchEvents, true);
     
-    if (qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")) {
-        qputenv("WAYLAND_DISPLAY", "wayland-1");
-    }
+    // CRITICAL: Also enable mouse-to-touch (some systems need this)
+    QGuiApplication::setAttribute(Qt::AA_SynthesizeTouchForUnhandledMouseEvents, true);
 
-    qputenv("QT_LOGGING_RULES", "qt.qpa.wayland*=true");
+    qputenv("QT_QPA_PLATFORM", "wayland");
+    qputenv("WAYLAND_DISPLAY", "wayland-1");
+    qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
     
+    // DEBUG: Enable input debugging
+    qputenv("QT_LOGGING_RULES", "qt.qpa.input*=true");
+
     QGuiApplication app(argc, argv);
     app.setApplicationName("GearSelector");
-    app.setOrganizationName("HeadUnit");
-    
-    // Register the GearHandler type for QML
-    qmlRegisterType<GS_Handler>("GearSelector", 1, 0, "GearHandler");
-    
+
+    // Create handler
+    GS_Handler gsHandler;
+
     QQmlApplicationEngine engine;
     
-    // Try to load from resources first
-    QUrl url(QStringLiteral("qrc:/Main.qml"));
+    // CRITICAL: Register handler with QML
+    engine.rootContext()->setContextProperty("gsHandler", &gsHandler);
     
-    // If resource doesn't exist, try file path
-    if (!QFile::exists(":/Main.qml")) {
-        QString currentPath = QDir::currentPath();
-        QString qmlFile = currentPath + "/../Main.qml";
-        if (QFile::exists(qmlFile)) {
-            url = QUrl::fromLocalFile(qmlFile);
-            qDebug() << "Loading QML from file:" << qmlFile;
-        } else {
-            qCritical() << "Cannot find Main.qml";
-            return -1;
-        }
-    } else {
-        qDebug() << "Loading QML from resources";
-    }
-    
-    engine.load(url);
+    // Load the TEST QML
+    engine.load(QUrl(QStringLiteral("qrc:/Main_Test.qml")));
     
     if (engine.rootObjects().isEmpty()) {
         qCritical() << "Failed to load QML";
         return -1;
     }
-    
-    qDebug() << "GearSelector started";
-    qDebug() << "Wayland display:" << qgetenv("WAYLAND_DISPLAY");
-    
+
     return app.exec();
 }
