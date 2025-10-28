@@ -1,30 +1,29 @@
+// main.cpp
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QtWaylandCompositor>
-#include <QQuickView>
+#include <QDir>
 #include <QDebug>
-#include "scriptexecutor.h"
+#include "dbus_manager.h"
 
 int main(int argc, char *argv[])
 {
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
 
     QGuiApplication app(argc, argv);
-
     app.setOrganizationName("HeadUnit");
     app.setOrganizationDomain("com.headunit");
     app.setApplicationName("HeadUnit");
 
-    // Create script executor
-    ScriptExecutor scriptExecutor;
+    // Create D-Bus manager (replaces ScriptExecutor)
+    DBusManager dbusManager;
 
     QQmlApplicationEngine engine;
 
-    // Expose script executor to QML
-    engine.rootContext()->setContextProperty("scriptExecutor", &scriptExecutor);
+    // Expose D-Bus manager to QML
+    engine.rootContext()->setContextProperty("dbusManager", &dbusManager);
 
-    qDebug() << "Starting HeadUnit Compositor...";
+    qDebug() << "=== Starting HeadUnit Compositor ===";
     qDebug() << "Platform:" << QGuiApplication::platformName();
     qDebug() << "Current directory:" << QDir::currentPath();
 
@@ -45,7 +44,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    qDebug() << "HeadUnit Compositor started successfully";
+    qInfo() << "=== HeadUnit Compositor Ready ===";
 
     return app.exec();
 }

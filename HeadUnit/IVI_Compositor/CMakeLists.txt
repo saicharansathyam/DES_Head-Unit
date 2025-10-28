@@ -14,6 +14,8 @@ find_package(Qt6 REQUIRED COMPONENTS
     Quick
     WaylandCompositor
 )
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS DBus)
 
 # Create resources file
 qt_add_resources(RESOURCES qml.qrc)
@@ -23,7 +25,8 @@ add_executable(headUnit
     main.cpp
     ${RESOURCES}
     qml.qrc
-    scriptexecutor.h
+    dbus_manager.h dbus_manager.cpp
+
 )
 
 # Link libraries
@@ -34,6 +37,8 @@ target_link_libraries(headUnit PRIVATE
     Qt6::Quick
     Qt6::WaylandCompositor
 )
+target_link_libraries(headUnit PRIVATE Qt6::Core)
+target_link_libraries(headUnit PRIVATE Qt6::DBus)
 
 # Compiler flags
 target_compile_options(headUnit PRIVATE
@@ -44,11 +49,5 @@ target_compile_options(headUnit PRIVATE
 # Installation
 install(TARGETS headUnit
     RUNTIME DESTINATION bin
-)
-
-# Install scripts
-install(PROGRAMS
-    ${CMAKE_SOURCE_DIR}/dbus_send_helper.sh
-    DESTINATION share/headunit
 )
 
