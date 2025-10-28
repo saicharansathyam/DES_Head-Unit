@@ -1,0 +1,48 @@
+{
+  "basePath": "/home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit",
+  "applications": [
+    {
+      "iviId": 1000,
+      "name": "HomePage",
+      "displayName": "Home Page",
+      "binaryPath": "HomePage/build/HomePage",
+      "role": "HomePage"
+    },
+    {
+      "iviId": 1001,
+      "name": "GearSelector",
+      "displayName": "Gear Selector",
+      "binaryPath": "GearSelector/build/GearSelector",
+      "role": "GearSelector"
+    },
+    {
+      "iviId": 1002,
+      "name": "MediaPlayer",
+      "displayName": "Media Player",
+      "binaryPath": "MediaPlayer/build/MediaPlayer",
+      "role": "MediaPlayer"
+    },
+    {
+      "iviId": 1003,
+      "name": "ThemeColor",
+      "displayName": "Theme & Colors",
+      "binaryPath": "ThemeColor/build/ThemeColor",
+      "role": "ThemeColor"
+    },
+    {
+      "iviId": 1004,
+      "name": "Navigation",
+      "displayName": "Navigation",
+      "binaryPath": "Navigation/build/Navigation",
+      "role": "Navigation"
+    },
+    {
+      "iviId": 1005,
+      "name": "Settings",
+      "displayName": "Settings",
+      "binaryPath": "Settings/build/Settings",
+      "role": "Settings"
+    }
+  ]
+}
+
