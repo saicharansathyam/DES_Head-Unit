@@ -4,109 +4,61 @@ import QtQuick.Controls
 
 ApplicationWindow {
     visible: true
-    width: 400
-    height: 350
-    title: "Theme Color Changer - RGB Sliders"
+    width: 824
+    height: 550
+    title: "Theme Color Selector"
 
     Rectangle {
         anchors.fill: parent
         color: '#1e293b'
 
         Column {
-            spacing: 15
+            spacing: 20
             anchors.centerIn: parent
-            width: parent.width * 0.8
 
             Text {
-                text: "Current Theme Color: " + ThemeColorClient.color
-                color: ThemeColorClient.color
-                font.pixelSize: 20
+                text: "Theme Color Selector"
+                color: "white"
+                font.pixelSize: 28
+                font.bold: true
                 horizontalAlignment: Text.AlignHCenter
                 width: parent.width
+                anchors.horizontalCenter: parent.horizontalCenter
             }
 
-            // Red slider
-            Row {
-                spacing: 10
-                Label {
-                    text: "Red:"
-                    color: "white"
-                }
-                Slider {
-                    id: redSlider
-                    from: 0; to: 255
-                    value: parseInt(ThemeColorClient.color.substr(1, 2), 16)
-                    onValueChanged: updateColor()
-                }
-                Text {
-                    text: redSlider.value.toFixed(0)
-                    width: 30
-                    horizontalAlignment: Text.AlignRight
+            // Color Wheel Component
+            ColorWheel {
+                id: colorWheel
+                width: 400
+                height: 400
+                anchors.horizontalCenter: parent.horizontalCenter
+
+                // Fixed: Use function with formal parameter
+                onColorSelected: function(selectedColor) {
+                    previewButton.updatePreviewColor(selectedColor)
                 }
             }
 
-            // Green slider
-            Row {
-                spacing: 10
-                Label {
-                    text: "Green:"
-                    color: "white"
-                }
-                Slider {
-                    id: greenSlider
-                    from: 0; to: 255
-                    value: parseInt(ThemeColorClient.color.substr(3, 2), 16)
-                    onValueChanged: updateColor()
-                }
-                Text {
-                    text: greenSlider.value.toFixed(0)
-                    width: 30
-                    horizontalAlignment: Text.AlignRight
-                }
-            }
+            // Preview and Confirm Button
+            PreviewButton {
+                id: previewButton
+                width: 150
+                height: 150
+                anchors.horizontalCenter: parent.horizontalCenter
+                currentColor: ThemeColorClient.color
 
-            // Blue slider
-            Row {
-                spacing: 10
-                Label {
-                    text: "Blue:"
-                    color: "white"
-                }
-                Slider {
-                    id: blueSlider
-                    from: 0; to: 255
-                    value: parseInt(ThemeColorClient.color.substr(5, 2), 16)
-                    onValueChanged: updateColor()
-                }
-                Text {
-                    text: blueSlider.value.toFixed(0)
-                    width: 30
-                    horizontalAlignment: Text.AlignRight
+                onColorConfirmed: function(confirmedColor) {
+                    ThemeColorClient.setColor(confirmedColor)
                 }
             }
         }
     }
 
-    function toHex(value) {
-        var hex = Math.floor(value).toString(16)
-        return hex.length === 1 ? "0" + hex : hex
-    }
-
-    function updateColor() {
-        var newColor = "#" + toHex(redSlider.value) + toHex(greenSlider.value) + toHex(blueSlider.value)
-        if (ThemeColorClient.color !== newColor) {
-            ThemeColorClient.setColor(newColor)
-        }
-    }
-
+    // Listen for external color changes from DBus
     Connections {
         target: ThemeColorClient
-        onColorChanged: {
-            // Update sliders on external color change
-            redSlider.value = parseInt(ThemeColorClient.color.substr(1, 2), 16)
-            greenSlider.value = parseInt(ThemeColorClient.color.substr(3, 2), 16)
-            blueSlider.value = parseInt(ThemeColorClient.color.substr(5, 2), 16)
+        function onColorChanged() {
+            previewButton.resetToCurrentColor()
         }
     }
 }
-
