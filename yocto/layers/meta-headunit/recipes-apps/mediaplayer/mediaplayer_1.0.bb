@@ -1,33 +1,69 @@
 SUMMARY = "Media Player Application"
-DESCRIPTION = "Media player UI for the head unit"
-LICENSE = "CLOSED"
+DESCRIPTION = "Advanced media player with USB, YouTube, and D-Bus integration"
+LICENSE = "MIT"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
-# Qt6 dependencies:
-# - qtbase (includes Qt6::DBus when built with dbus PACKAGECONFIG)
-# - qtdeclarative (Qt Quick/QML for target)
-# - qtdeclarative-native (Qt6QuickTools for build host)
-# - qtwayland (Wayland protocol support)
-# - qtmultimedia (Media playback)
-DEPENDS = "qtbase qtdeclarative qtdeclarative-native qtwayland qtmultimedia"
+DEPENDS = " \
+    qtbase \
+    qtdeclarative \
+    qtdeclarative-native \
+    qtwayland \
+    qtmultimedia \
+    qtwebview \
+    qtvirtualkeyboard \
+"
 
-SRC_URI = "file://main.cpp \
-           file://mp_handler.cpp \
-           file://mp_handler.h \
-           file://CMakeLists.txt \
-           file://Main.qml \
-           file://Main_Test.qml \
-          "
+SRC_URI = " \
+    file://main.cpp \
+    file://mp_handler.cpp \
+    file://mp_handler.h \
+    file://CMakeLists.txt \
+    file://resources.qrc \
+    file://qml/Main.qml \
+    file://qml/MediaControls.qml \
+    file://qml/MediaDisplay.qml \
+    file://qml/ProgressBar.qml \
+    file://qml/SourceSelector.qml \
+    file://qml/USBPlaylist.qml \
+    file://qml/VolumeControl.qml \
+    file://qml/YouTubeView.qml \
+    file://icons/play.svg \
+    file://icons/pause.svg \
+    file://icons/stop.svg \
+    file://icons/skip-back.svg \
+    file://icons/skip-forward.svg \
+    file://icons/volume.svg \
+"
 
 S = "${WORKDIR}"
 
 inherit qt6-cmake
 
+EXTRA_OECMAKE += " \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DQT_QPA_PLATFORM=wayland \
+"
+
 do_install() {
     install -d ${D}${bindir}
     install -m 0755 ${B}/MediaPlayer ${D}${bindir}/
+    
+    # Install app metadata
+    install -d ${D}${datadir}/headunit/apps
+    install -m 0644 ${WORKDIR}/mediaplayer.desktop ${D}${datadir}/headunit/apps/
 }
 
-FILES:${PN} = "${bindir}/MediaPlayer"
+FILES:${PN} = " \
+    ${bindir}/MediaPlayer \
+    ${datadir}/headunit/apps/mediaplayer.desktop \
+"
 
-# Runtime dependencies
-RDEPENDS:${PN} += "qtbase qtdeclarative qtwayland qtmultimedia"
+RDEPENDS:${PN} += " \
+    qtbase \
+    qtdeclarative \
+    qtwayland \
+    qtwayland-plugins \
+    qtmultimedia \
+    qtwebview \
+    qtvirtualkeyboard \
+"

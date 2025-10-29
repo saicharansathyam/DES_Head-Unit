@@ -1,0 +1,16 @@
+[Unit]
+Description=Head Unit Application Framework Manager
+After=dbus.service
+Requires=dbus.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/headunit-afm
+Restart=always
+RestartSec=5
+Environment="QT_QPA_PLATFORM=offscreen"
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

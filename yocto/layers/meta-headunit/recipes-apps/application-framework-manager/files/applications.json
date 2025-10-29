@@ -1,0 +1,19 @@
+{
+  "applications": [
+    {
+      "name": "GearSelector",
+      "executable": "/usr/bin/GearSelector",
+      "autostart": true
+    },
+    {
+      "name": "MediaPlayer",
+      "executable": "/usr/bin/MediaPlayer",
+      "autostart": true
+    },
+    {
+      "name": "ThemeColor",
+      "executable": "/usr/bin/ThemeColor",
+      "autostart": false
+    }
+  ]
+}

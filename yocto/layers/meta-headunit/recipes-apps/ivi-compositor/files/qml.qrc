@@ -1,0 +1,11 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>qml/Main.qml</file>
+        <file>qml/LeftPanel.qml</file>
+        <file>qml/RightPanel.qml</file>
+        <file>qml/SurfaceManager.qml</file>
+        <file>qml/AppSwitcher.qml</file>
+    </qresource>
+</RCC>
+

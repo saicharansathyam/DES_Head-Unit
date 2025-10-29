@@ -1,0 +1,53 @@
+[Unit]
+Description=HeadUnit IVI Compositor
+Documentation=man:ivi-compositor(1)
+After=dbus.service systemd-user-sessions.service
+Requires=dbus.service
+Before=application-framework-manager.service
+
+[Service]
+Type=simple
+User=root
+Group=wayland
+ExecStartPre=/bin/mkdir -p /run/user/0
+ExecStartPre=/bin/chmod 700 /run/user/0
+ExecStart=/usr/bin/ivi-compositor
+Restart=always
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=10
+
+# Environment variables for Wayland and Qt
+Environment="XDG_RUNTIME_DIR=/run/user/0"
+Environment="WAYLAND_DISPLAY=wayland-1"
+Environment="QT_QPA_PLATFORM=eglfs"
+Environment="QT_QPA_EGLFS_INTEGRATION=eglfs_kms"
+Environment="QT_WAYLAND_SHELL_INTEGRATION=ivi-shell"
+Environment="QT_LOGGING_RULES=*.debug=false;qt.qpa.*=true"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ivi-compositor
+
+# Security settings
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/user/0 /var/log/headunit /tmp
+SupplementaryGroups=video render input
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=80%
+
+# Device access for graphics and input
+DeviceAllow=/dev/dri rw
+DeviceAllow=/dev/input rw
+DeviceAllow=/dev/fb0 rw
+DeviceAllow=/dev/tty0 rw
+
+[Install]
+WantedBy=graphical.target
+WantedBy=multi-user.target

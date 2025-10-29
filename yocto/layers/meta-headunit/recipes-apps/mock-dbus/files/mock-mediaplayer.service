@@ -1,0 +1,30 @@
+[Unit]
+Description=Mock MediaPlayer D-Bus Service
+Documentation=man:mock-mediaplayer(1)
+After=dbus.service
+Requires=dbus.service
+Before=application-framework-manager.service
+
+[Service]
+Type=dbus
+BusName=com.headunit.MediaPlayer
+ExecStart=/usr/bin/mock-mediaplayer-service
+Restart=always
+RestartSec=3
+TimeoutStartSec=10
+
+# Environment
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
+Environment="XDG_RUNTIME_DIR=/run/user/0"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mock-mediaplayer
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
