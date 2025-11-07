@@ -9,7 +9,6 @@ DEPENDS = " \
     qtdeclarative-native \
     qtwayland \
     qtmultimedia \
-    qtwebview \
     qtvirtualkeyboard \
 "
 
@@ -33,6 +32,7 @@ SRC_URI = " \
     file://icons/skip-back.svg \
     file://icons/skip-forward.svg \
     file://icons/volume.svg \
+    file://mediaplayer.desktop \
 "
 
 S = "${WORKDIR}"
@@ -64,6 +64,5 @@ RDEPENDS:${PN} += " \
     qtwayland \
     qtwayland-plugins \
     qtmultimedia \
-    qtwebview \
     qtvirtualkeyboard \
 "

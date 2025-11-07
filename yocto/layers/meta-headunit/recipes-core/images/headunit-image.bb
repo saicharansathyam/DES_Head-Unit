@@ -9,19 +9,12 @@ IMAGE_INSTALL:append = " \
     packagegroup-headunit-fonts \
     packagegroup-headunit-input \
     packagegroup-headunit-graphics \
+    headunit-startup \
 "
 
 # Development features
 IMAGE_FEATURES += "ssh-server-openssh"
 EXTRA_IMAGE_FEATURES += "debug-tweaks tools-debug"
-
-# Enable systemd
-DISTRO_FEATURES:append = " systemd"
-VIRTUAL-RUNTIME_init_manager = "systemd"
-VIRTUAL-RUNTIME_initscripts = ""
-
-# Touch screen support
-DISTRO_FEATURES:append = " touchscreen opengl wayland"
 
 # Qt optimizations
 PACKAGECONFIG:append:pn-qtbase = " fontconfig dbus accessibility"

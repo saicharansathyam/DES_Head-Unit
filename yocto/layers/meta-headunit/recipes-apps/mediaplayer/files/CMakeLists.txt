@@ -14,7 +14,6 @@ find_package(Qt6 6.4 REQUIRED COMPONENTS
     Quick
     QuickControls2
     DBus
-    WebView
     VirtualKeyboard
 )
 
@@ -34,7 +33,6 @@ target_link_libraries(MediaPlayer PRIVATE
     Qt6::Quick
     Qt6::QuickControls2
     Qt6::DBus
-    Qt6::WebView
     Qt6::VirtualKeyboard
 )
 

@@ -36,7 +36,6 @@ RDEPENDS:packagegroup-headunit-apps = " \
     themecolor \
     settings \
     mock-dbus \
-    headunit-startup \
 "
 
 RDEPENDS:packagegroup-headunit-system = " \

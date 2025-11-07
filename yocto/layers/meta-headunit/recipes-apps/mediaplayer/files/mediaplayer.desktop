@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Media Player
+Comment=Advanced media player with USB support
+Exec=/usr/bin/MediaPlayer
+Icon=multimedia-player
+Terminal=false
+Categories=AudioVideo;Player;Qt;
+Keywords=media;audio;video;player;music;
+StartupNotify=true

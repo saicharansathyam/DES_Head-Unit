@@ -15,7 +15,6 @@ RDEPENDS:${PN} = " \
     qtdeclarative-qmlplugins \
     qtwayland \
     qtwayland-plugins \
-    qtwayland-tools \
     qtmultimedia \
     qtmultimedia-plugins \
     qtmultimedia-qmlplugins \

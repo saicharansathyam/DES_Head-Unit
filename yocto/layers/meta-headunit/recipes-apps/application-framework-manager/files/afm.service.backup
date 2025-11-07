@@ -8,14 +8,7 @@ Type=simple
 ExecStart=/usr/bin/headunit-afm
 Restart=always
 RestartSec=5
-
-# Environment variables
-Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
-Environment="XDG_RUNTIME_DIR=/run/user/0"
 Environment="QT_QPA_PLATFORM=offscreen"
-Environment="QT_QUICK_BACKEND=software"
-
-# Logging
 StandardOutput=journal
 StandardError=journal
 

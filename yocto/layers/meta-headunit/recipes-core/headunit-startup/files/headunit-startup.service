@@ -1,0 +1,20 @@
+[Unit]
+Description=HeadUnit Auto-Startup Service
+After=multi-user.target network.target dbus.service
+Requires=dbus.service
+Wants=mock-dbus.service mock-theme.service mock-mediaplayer.service mock-settings.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/headunit-startup.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=headunit-startup
+
+# Environment
+Environment="HOME=/root"
+
+[Install]
+WantedBy=graphical.target

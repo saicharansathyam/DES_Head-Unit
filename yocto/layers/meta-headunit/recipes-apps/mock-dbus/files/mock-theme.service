@@ -3,19 +3,18 @@ Description=Mock Theme D-Bus Service
 Documentation=man:mock-theme(1)
 After=dbus.service
 Requires=dbus.service
-Before=application-framework-manager.service
+Before=headunit.service
 
 [Service]
-Type=dbus
-BusName=com.headunit.ThemeService
+Type=simple
 ExecStart=/usr/bin/mock-theme-service
 Restart=always
 RestartSec=3
-TimeoutStartSec=10
 
 # Environment
 Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
 Environment="XDG_RUNTIME_DIR=/run/user/0"
+Environment="QT_QUICK_BACKEND=software"
 
 # Logging
 StandardOutput=journal

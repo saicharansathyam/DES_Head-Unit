@@ -3,16 +3,19 @@
     {
       "name": "GearSelector",
       "executable": "/usr/bin/GearSelector",
+      "surface_id": 1001,
       "autostart": true
     },
     {
       "name": "MediaPlayer",
       "executable": "/usr/bin/MediaPlayer",
+      "surface_id": 1002,
       "autostart": true
     },
     {
       "name": "ThemeColor",
       "executable": "/usr/bin/ThemeColor",
+      "surface_id": 1003,
       "autostart": false
     }
   ]
