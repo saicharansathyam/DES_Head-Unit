@@ -7,15 +7,36 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    ThemeColorClient themeClient;
+    app.setApplicationName("ThemeColor");
+    app.setOrganizationName("HeadUnit");
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("ThemeColorClient", &themeClient);
 
-    engine.load(QUrl(QStringLiteral("ThemeColor/Main.qml")));
-    if (engine.rootObjects().isEmpty())
+    // Create ThemeColorClient instance
+    ThemeColorClient themeClient;
+    engine.rootContext()->setContextProperty("themeClient", &themeClient);
+
+    // Load QML from resources
+    const QUrl url(QStringLiteral("qrc:/Main.qml"));
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+                         if (!obj && url == objUrl) {
+                             qCritical() << "Failed to load Main.qml";
+                             QCoreApplication::exit(-1);
+                         }
+                     }, Qt::QueuedConnection);
+
+    engine.load(url);
+
+    if (engine.rootObjects().isEmpty()) {
+        qCritical() << "No QML objects loaded!";
         return -1;
+    }
+
+    qDebug() << "ThemeColor started successfully";
 
     return app.exec();
 }
+
 
