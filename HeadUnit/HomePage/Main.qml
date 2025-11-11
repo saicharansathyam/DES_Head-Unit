@@ -73,6 +73,7 @@ Window {
                             onClicked: launchApp("MediaPlayer")
                             hoverEnabled: true
                         }
+
                         Image {
                             source: "qrc:/images/play.png"
                             width: 64
