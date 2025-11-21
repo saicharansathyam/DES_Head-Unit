@@ -195,9 +195,9 @@ QtObject {
 
             // Tell RightPanel to show surface container
             if (compositor && compositor.defaultOutput && compositor.defaultOutput.window) {
-                var rightPanel = compositor.defaultOutput.window.rightPanel
-                if (rightPanel) {
-                    rightPanel.showSurface()
+                var rightPanelWin = compositor.defaultOutput.window.rightPanel
+                if (rightPanelWin) {
+                    rightPanelWin.showSurface()
                 }
             }
 
