@@ -6,6 +6,8 @@
 #include <QDebug>
 #include "mp_handler.h"
 #include "../theme_client.h"
+
+
 int main(int argc, char *argv[])
 {
     // IMPORTANT: Enable virtual keyboard BEFORE creating QGuiApplication
@@ -13,12 +15,6 @@ int main(int argc, char *argv[])
 
     // Initialize QtWebView
     QtWebView::initialize();
-
-    // Set Wayland environment
-    qputenv("QT_QPA_PLATFORM", "wayland");
-    if (qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")) {
-        qputenv("WAYLAND_DISPLAY", "wayland-1");
-    }
 
     QQuickStyle::setStyle("Fusion");
     QGuiApplication app(argc, argv);

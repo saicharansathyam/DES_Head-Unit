@@ -1,176 +1,179 @@
 import QtQuick
 import QtQuick.Controls
 
-Row {
-    id: mediaControls
-    spacing: 15
-    anchors.horizontalCenter: parent.horizontalCenter
+Item {
+    id: root
 
-    property bool isPlaying: false
+    Row {
+        id: controlsRow
+        spacing: 15
+        anchors.centerIn: parent
 
-    signal previousClicked()
-    signal playPauseClicked()
-    signal nextClicked()
-    signal shuffleToggled()
-    signal repeatToggled()
+        // Shuffle button
+        Button {
+            width: 80
+            height: 80
 
-    // Shuffle button
-    Button {
-        width: 50
-        height: 50
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return "#1e293b"
+                }
+                radius: 25
+                border.width: 1
+                border.color: theme.accentColor
 
-        background: Rectangle {
-            color: {
-                if (parent.pressed) return theme.buttonPressedColor
-                if (parent.hovered) return theme.buttonHoverColor
-                return "#1e293b"
+                Behavior on color { ColorAnimation { duration: 200 } }
             }
-            radius: 25
-            border.width: 1
-            border.color: theme.accentColor
 
-            Behavior on color { ColorAnimation { duration: 200 } }
-        }
-
-        contentItem: Text {
-            text: "🔀"
-            font.pixelSize: 20
-            color: "white"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-
-        onClicked: shuffleToggled()
-    }
-
-    // Previous button
-    Button {
-        width: 60
-        height: 60
-
-        background: Rectangle {
-            color: {
-                if (parent.pressed) return theme.buttonPressedColor
-                if (parent.hovered) return theme.buttonHoverColor
-                return theme.themeColor
+            contentItem: Text {
+                text: "🔀"
+                font.pixelSize: 20
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
             }
-            radius: 30
-            border.width: 2
-            border.color: theme.accentColor
 
-            Behavior on color { ColorAnimation { duration: 200 } }
-        }
-
-        contentItem: Text {
-            text: "⏮"
-            font.pixelSize: 24
-            color: "white"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-
-        onClicked: previousClicked()
-    }
-
-    // Play/Pause button (larger, centered)
-    Button {
-        width: 80
-        height: 80
-
-        background: Rectangle {
-            color: {
-                if (parent.pressed) return theme.buttonPressedColor
-                if (parent.hovered) return theme.buttonHoverColor
-                return theme.themeColor
+            onClicked: {
+                mpHandler.toggleShuffle()
             }
-            radius: 40
-            border.width: 3
-            border.color: theme.accentColor
+        }
 
-            Behavior on color { ColorAnimation { duration: 200 } }
+        // Previous button
+        Button {
+            width: 80
+            height: 80
 
-            // Glow effect
-            Rectangle {
-                anchors.centerIn: parent
-                width: parent.width + 10
-                height: parent.height + 10
-                radius: (parent.width + 10) / 2
-                color: "transparent"
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return theme.themeColor
+                }
+                radius: 30
                 border.width: 2
-                border.color: theme.themeColor
-                opacity: 0.3
+                border.color: theme.accentColor
+
+                Behavior on color { ColorAnimation { duration: 200 } }
+            }
+
+            contentItem: Text {
+                text: "⏮"
+                font.pixelSize: 24
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.previous()
             }
         }
 
-        contentItem: Text {
-            text: isPlaying ? "⏸" : "▶"
-            font.pixelSize: 32
-            color: "white"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
+        // Play/Pause button (larger, centered)
+        Button {
+            width: 80
+            height: 80
 
-        onClicked: {
-            isPlaying = !isPlaying
-            playPauseClicked()
-        }
-    }
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return theme.themeColor
+                }
+                radius: 40
+                border.width: 3
+                border.color: theme.accentColor
 
-    // Next button
-    Button {
-        width: 60
-        height: 60
+                Behavior on color { ColorAnimation { duration: 200 } }
 
-        background: Rectangle {
-            color: {
-                if (parent.pressed) return theme.buttonPressedColor
-                if (parent.hovered) return theme.buttonHoverColor
-                return theme.themeColor
+                // Glow effect
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width + 10
+                    height: parent.height + 10
+                    radius: (parent.width + 10) / 2
+                    color: "transparent"
+                    border.width: 2
+                    border.color: theme.themeColor
+                    opacity: 0.3
+                }
             }
-            radius: 30
-            border.width: 2
-            border.color: theme.accentColor
 
-            Behavior on color { ColorAnimation { duration: 200 } }
-        }
-
-        contentItem: Text {
-            text: "⏭"
-            font.pixelSize: 24
-            color: "white"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-        }
-
-        onClicked: nextClicked()
-    }
-
-    // Repeat button
-    Button {
-        width: 50
-        height: 50
-
-        background: Rectangle {
-            color: {
-                if (parent.pressed) return theme.buttonPressedColor
-                if (parent.hovered) return theme.buttonHoverColor
-                return "#1e293b"
+            contentItem: Text {
+                text: mpHandler.isPlaying ? "⏸" : "▶"
+                font.pixelSize: 32
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
             }
-            radius: 25
-            border.width: 1
-            border.color: theme.accentColor
 
-            Behavior on color { ColorAnimation { duration: 200 } }
+            onClicked: {
+                mpHandler.togglePlayPause()
+            }
         }
 
-        contentItem: Text {
-            text: "🔁"
-            font.pixelSize: 20
-            color: "white"
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
+        // Next button
+        Button {
+            width: 80
+            height: 80
+
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return theme.themeColor
+                }
+                radius: 30
+                border.width: 2
+                border.color: theme.accentColor
+
+                Behavior on color { ColorAnimation { duration: 200 } }
+            }
+
+            contentItem: Text {
+                text: "⏭"
+                font.pixelSize: 24
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.next()
+            }
         }
 
-        onClicked: repeatToggled()
+        // Repeat button
+        Button {
+            width: 80
+            height: 80
+
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return "#1e293b"
+                }
+                radius: 25
+                border.width: 1
+                border.color: theme.accentColor
+
+                Behavior on color { ColorAnimation { duration: 200 } }
+            }
+
+            contentItem: Text {
+                text: "🔁"
+                font.pixelSize: 20
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.toggleRepeat()
+            }
+        }
     }
 }

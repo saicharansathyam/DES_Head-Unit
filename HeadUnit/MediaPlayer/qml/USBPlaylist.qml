@@ -1,216 +1,122 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 
-Item {
+Rectangle {
     id: root
+    color: "#0f172a"
 
-    property var mediaFiles: []
-    property int currentTrackIndex: -1
-    property color accentColor: "#3b82f6"
-    property color secondaryColor: "#334155"
+    // Signal to notify when a song is selected
+    signal songSelected()
 
-    signal mediaFileSelected(int index)
-    signal refreshRequested()
-
-    Rectangle {
+    Column {
         anchors.fill: parent
-        color: "#0f172a"
-        border.color: "#334155"
-        border.width: 1
+        anchors.margins: 20
+        spacing: 15
 
-        ColumnLayout {
-            anchors.fill: parent
-            spacing: 0
+        Text {
+            text: "USB Playlist"
+            font.pixelSize: 24
+            font.bold: true
+            color: theme.themeColor
+            anchors.horizontalCenter: parent.horizontalCenter
 
-            // Header with count and refresh
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 40
-                color: secondaryColor
+            Behavior on color { ColorAnimation { duration: 300 } }
+        }
 
-                RowLayout {
+        ListView {
+            id: playlistView
+            width: parent.width
+            height: parent.height - 50
+            clip: true
+            spacing: 8
+
+            model: mpHandler.playlist
+
+            delegate: Rectangle {
+                width: playlistView.width
+                height: 60
+                radius: 8
+                color: model.isPlaying ? theme.themeColor : "#1e293b"
+                border.width: model.isPlaying ? 2 : 1
+                border.color: model.isPlaying ? theme.accentColor : "#334155"
+
+                Behavior on color { ColorAnimation { duration: 200 } }
+
+                Row {
                     anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 10
+                    anchors.margins: 12
+                    spacing: 15
 
-                    Label {
-                        text: "Playlist"
-                        color: "white"
-                        font.pixelSize: 13
-                        font.bold: true
+                    // Track number
+                    Text {
+                        text: (index + 1).toString()
+                        font.pixelSize: 18
+                        font.bold: model.isPlaying
+                        color: model.isPlaying ? "white" : theme.accentColor
+                        width: 30
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        Behavior on color { ColorAnimation { duration: 200 } }
                     }
 
-                    Rectangle {
-                        Layout.preferredWidth: 45
-                        Layout.preferredHeight: 22
-                        color: accentColor
-                        radius: 11
+                    // Track info
+                    Column {
+                        spacing: 4
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 100
 
-                        Label {
-                            anchors.centerIn: parent
-                            text: mediaFiles.length.toString()
+                        Text {
+                            text: model.title || "Unknown Track"
+                            font.pixelSize: 16
+                            font.bold: model.isPlaying
                             color: "white"
-                            font.pixelSize: 11
-                            font.bold: true
+                            elide: Text.ElideRight
+                            width: parent.width
+                        }
+
+                        Text {
+                            text: model.artist || "Unknown Artist"
+                            font.pixelSize: 13
+                            color: model.isPlaying ? "#ffffff" : "#94a3b8"
+                            elide: Text.ElideRight
+                            width: parent.width
+
+                            Behavior on color { ColorAnimation { duration: 200 } }
                         }
                     }
 
-                    Item { Layout.fillWidth: true }
-
-                    Button {
-                        Layout.preferredWidth: 30
-                        Layout.preferredHeight: 30
-                        text: "⟳"
+                    // Duration
+                    Text {
+                        text: model.duration || "0:00"
                         font.pixelSize: 14
+                        color: "#94a3b8"
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
 
-                        background: Rectangle {
-                            color: parent.pressed ? Qt.darker(accentColor, 1.2) :
-                                   parent.hovered ? Qt.lighter(accentColor, 1.1) : accentColor
-                            radius: 4
-                        }
-
-                        contentItem: Text {
-                            text: parent.text
-                            font: parent.font
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        onClicked: root.refreshRequested()
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        console.log("Playing track:", model.title)
+                        mpHandler.playTrack(index)
+                        root.songSelected()  // Emit signal to switch back to MediaDisplay
                     }
                 }
             }
 
-            // Playlist view
-            ListView {
-                id: playlistView
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                model: mediaFiles
-                clip: true
-                spacing: 1
+            ScrollBar.vertical: ScrollBar {
+                active: true
+                policy: ScrollBar.AsNeeded
 
-                ScrollBar.vertical: ScrollBar {
-                    policy: ScrollBar.AsNeeded
-                    width: 8
-                }
+                contentItem: Rectangle {
+                    implicitWidth: 8
+                    radius: 4
+                    color: theme.themeColor
+                    opacity: parent.pressed ? 1.0 : 0.6
 
-                delegate: Rectangle {
-                    width: playlistView.width - 8
-                    height: 55
-                    color: index === currentTrackIndex ? accentColor :
-                           mouseArea.pressed ? Qt.darker(secondaryColor, 1.3) :
-                           mouseArea.containsMouse ? Qt.lighter(secondaryColor, 1.1) :
-                           index % 2 === 0 ? secondaryColor : Qt.darker(secondaryColor, 1.05)
-
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 10
-
-                        Rectangle {
-                            width: 30
-                            height: 30
-                            radius: 15
-                            color: index === currentTrackIndex ? "white" : accentColor
-                            Layout.alignment: Qt.AlignVCenter
-
-                            Label {
-                                anchors.centerIn: parent
-                                text: (index + 1).toString()
-                                color: index === currentTrackIndex ? accentColor : "white"
-                                font.pixelSize: 12
-                                font.bold: true
-                            }
-                        }
-
-                        Column {
-                            Layout.fillWidth: true
-                            spacing: 3
-
-                            Label {
-                                text: modelData
-                                color: "white"
-                                font.pixelSize: 11
-                                font.bold: index === currentTrackIndex
-                                elide: Text.ElideMiddle
-                                width: parent.width
-                            }
-
-                            Label {
-                                text: getFileExtension(modelData).toUpperCase()
-                                color: index === currentTrackIndex ? "#e0e0e0" : "#9ca3af"
-                                font.pixelSize: 9
-                            }
-                        }
-
-                        Text {
-                            text: index === currentTrackIndex ? "♪" : "▶"
-                            color: index === currentTrackIndex ? "white" : accentColor
-                            font.pixelSize: 18
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-                    }
-
-                    MouseArea {
-                        id: mouseArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        onClicked: {
-                            root.mediaFileSelected(index)
-                        }
-                    }
-                }
-
-                // Empty state
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width * 0.9
-                    height: 180
-                    color: "transparent"
-                    visible: mediaFiles.length === 0
-
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 20
-
-                        Text {
-                            text: "🎵"
-                            font.pixelSize: 50
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-
-                        Label {
-                            text: "No Media Files"
-                            color: "#9ca3af"
-                            font.pixelSize: 16
-                            font.bold: true
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
-
-                        Label {
-                            text: "Insert a USB drive with media files\nor use the refresh button"
-                            color: "#6b7280"
-                            font.pixelSize: 11
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.WordWrap
-                            width: 220
-                        }
-                    }
+                    Behavior on color { ColorAnimation { duration: 300 } }
                 }
             }
         }
-    }
-
-    function getFileExtension(fileName) {
-        var parts = fileName.split('.')
-        return parts.length > 1 ? parts[parts.length - 1] : ""
     }
 }
