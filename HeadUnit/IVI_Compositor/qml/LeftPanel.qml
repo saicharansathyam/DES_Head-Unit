@@ -208,10 +208,10 @@ Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        anchors.topMargin: 10
+        //anchors.topMargin: 10
         // No left/right margins here - we'll center the surface inside
 
-        clip: true
+        //clip: true
 
         // Debug: Show the container bounds
         Rectangle {
@@ -226,7 +226,7 @@ Rectangle {
     // Placeholder
     Column {
         anchors.centerIn: gearSelectorContainer
-        spacing: 10
+        //spacing: 10
         visible: gearSelectorContainer.children.length === 0
 
         Text {

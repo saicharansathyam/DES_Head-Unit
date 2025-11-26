@@ -6,11 +6,10 @@
 #include "settingsmanager.h"
 #include "wifimanager.h"
 #include "bluetoothmanager.h"
+#include "../theme_client.h"
 
 int main(int argc, char *argv[])
 {
-    qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-    qputenv("QT_IVI_SURFACE_ID", "1005");  // IVI ID for Settings App
 
     QGuiApplication app(argc, argv);
 
@@ -22,6 +21,7 @@ int main(int argc, char *argv[])
     WiFiManager wifiManager;
     BluetoothManager bluetoothManager;
     SettingsManager settingsManager(&wifiManager, &bluetoothManager);
+    ThemeClient themeClient;
 
     QQmlApplicationEngine engine;
 
@@ -29,9 +29,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("settingsManager", &settingsManager);
     engine.rootContext()->setContextProperty("wifiManager", &wifiManager);
     engine.rootContext()->setContextProperty("bluetoothManager", &bluetoothManager);
-
-    qDebug() << "Starting Settings Application...";
-    qDebug() << "IVI Surface ID: 1006";
+    engine.rootContext()->setContextProperty("theme", &themeClient);
 
     const QUrl url(QStringLiteral("qrc:/qml/Main.qml"));
 

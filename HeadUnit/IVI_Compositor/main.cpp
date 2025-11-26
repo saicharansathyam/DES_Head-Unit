@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QDebug>
 #include "dbus_manager.h"
+#include "../theme_client.h"
 
 int main(int argc, char *argv[])
 {
@@ -18,10 +19,13 @@ int main(int argc, char *argv[])
     // Create D-Bus manager (replaces ScriptExecutor)
     DBusManager dbusManager;
 
+    ThemeClient themeClient;
+
     QQmlApplicationEngine engine;
 
     // Expose D-Bus manager to QML
     engine.rootContext()->setContextProperty("dbusManager", &dbusManager);
+    engine.rootContext()->setContextProperty("theme", &themeClient);
 
     qDebug() << "=== Starting HeadUnit Compositor ===";
     qDebug() << "Platform:" << QGuiApplication::platformName();

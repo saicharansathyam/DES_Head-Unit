@@ -8,18 +8,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Quick DBus)
 
+# Create resources file
+qt_add_resources(RESOURCES qml.qrc)
+
+
 # Create the executable
 add_executable(GearSelector
     main.cpp
     gs_handler.cpp
     gs_handler.h
-)
-
-# Create a resource file for QML
-qt_add_resources(GearSelector "qml"
-    PREFIX "/"
-    FILES
-        Main.qml
+    ../theme_client.cpp
+    ../theme_client.h
+    ${RESOURCES}
 )
 
 # Link libraries

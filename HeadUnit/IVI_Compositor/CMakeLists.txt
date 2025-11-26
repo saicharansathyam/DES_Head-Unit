@@ -24,9 +24,8 @@ qt_add_resources(RESOURCES qml.qrc)
 add_executable(headUnit
     main.cpp
     ${RESOURCES}
-    qml.qrc
     dbus_manager.h dbus_manager.cpp
-
+    ../theme_client.h ../theme_client.cpp
 )
 
 # Link libraries

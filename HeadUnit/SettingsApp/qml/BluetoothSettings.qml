@@ -1,313 +1,135 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 
 Rectangle {
-    id: bluetoothSettings
-    color: "transparent"
+    id: root
+    color: "#0f172a"
+
+    property string pairingDeviceId: ""
+    property string pairingDeviceName: ""
 
     Column {
         anchors.fill: parent
-        spacing: 15
+        anchors.margins: 20
+        spacing: 16
 
-        // Header
-        Row {
+        Text {
+            text: "Bluetooth"
+            font.pixelSize: 22
+            font.bold: true
+            color: theme.themeColor
+        }
+
+        Text {
+            text: bluetoothManager.isEnabled ? "Enabled" : "Disabled"
+            font.pixelSize: 14
+            color: bluetoothManager.isEnabled ? theme.themeColor : "#f97373"
+        }
+
+        Button {
+            id: scanButton
+            text: bluetoothManager.isScanning ? "Scanning..." : "Scan for Devices"
+            enabled: !bluetoothManager.isScanning
+            width: parent.width * 0.5
+            onClicked: bluetoothManager.startScan()
+        }
+
+        ListView {
             width: parent.width
-            height: 40
-            spacing: 15
+            height: 300
+            model: bluetoothManager.availableDevices
 
-            Text {
-                text: "Bluetooth Settings"
-                color: "#00ff00"
-                font.pixelSize: 24
-                font.bold: true
-                anchors.verticalCenter: parent.verticalCenter
-            }
+            delegate: Rectangle {
+                width: parent.width
+                height: 48
+                radius: 8
+                color: ListView.isCurrentItem ? theme.themeColor : "#020617"
+                border.color: ListView.isCurrentItem ? theme.accentColor : "#1f2933"
+                border.width: ListView.isCurrentItem ? 2 : 1
 
-            // Enable/Disable switch
-            Switch {
-                id: bluetoothSwitch
-                checked: bluetoothManager.isEnabled
-                anchors.verticalCenter: parent.verticalCenter
+                Row {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 10
 
-                onToggled: bluetoothManager.setEnabled(checked)
+                    Text {
+                        text: model.name
+                        color: "#e5e7eb"
+                        font.pixelSize: 14
+                    }
 
-                indicator: Rectangle {
-                    implicitWidth: 50
-                    implicitHeight: 25
-                    radius: 13
-                    color: bluetoothSwitch.checked ? "#00aa00" : "#404040"
+                    Item { width: 1; anchors.horizontalCenter: parent.horizontalCenter }
 
-                    Rectangle {
-                        x: bluetoothSwitch.checked ? parent.width - width - 3 : 3
-                        y: 3
-                        width: 19
-                        height: 19
-                        radius: 10
-                        color: "#ffffff"
+                    Text {
+                        text: model.connected ? "Connected" : ""
+                        color: theme.themeColor
+                        font.pixelSize: 12
+                    }
+                }
 
-                        Behavior on x {
-                            NumberAnimation { duration: 200 }
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if (requiresPairing) {
+                            pairingDeviceId = deviceId
+                            pairingDeviceName = name
+                            pairConfirmPopup.open()
+                        } else if (!connected) {
+                            bluetoothManager.connectDevice(deviceId)
                         }
                     }
                 }
             }
-
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
-            }
-
-            Button {
-                text: bluetoothManager.isScanning ? "Stop Scan" : "Scan"
-                width: 100
-                height: 35
-                enabled: bluetoothManager.isEnabled
-                anchors.verticalCenter: parent.verticalCenter
-
-                background: Rectangle {
-                    color: parent.enabled ? (parent.pressed ? "#505050" : "#404040") : "#2a2a2a"
-                    radius: 5
-                }
-
-                contentItem: Text {
-                    text: parent.text
-                    color: parent.enabled ? "#ffffff" : "#666666"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-
-                onClicked: {
-                    if (bluetoothManager.isScanning) {
-                        bluetoothManager.stopScan()
-                    } else {
-                        bluetoothManager.startScan()
-                    }
-                }
-            }
         }
+    }
 
-        // Paired devices
-        Text {
-            text: "Paired Devices"
-            color: "#ffffff"
-            font.pixelSize: 16
-            font.bold: true
-        }
+    Popup {
+        id: pairConfirmPopup
+        modal: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        x: (root.width - width) / 2
+        y: (root.height - height) / 2
 
         Rectangle {
-            width: parent.width
-            height: 180
-            color: "#2a2a2a"
+            width: 320
+            height: 160
+            color: "#263544"
             radius: 8
-
-            ListView {
-                id: pairedList
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 5
-                clip: true
-
-                model: bluetoothManager.pairedDevices
-
-                delegate: Rectangle {
-                    width: pairedList.width
-                    height: 50
-                    color: "#1a1a1a"
-                    radius: 5
-
-                    Row {
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 15
-
-                        Text {
-                            text: "🔗"
-                            font.pixelSize: 20
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
-
-                            Text {
-                                text: modelData.name
-                                color: "#ffffff"
-                                font.pixelSize: 13
-                                font.bold: true
-                            }
-
-                            Text {
-                                text: modelData.address
-                                color: "#888888"
-                                font.pixelSize: 10
-                            }
-                        }
-
-                        Item { width: parent.width - 300 }
-
-                        Button {
-                            text: "Connect"
-                            width: 75
-                            height: 30
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            background: Rectangle {
-                                color: parent.pressed ? "#305030" : "#00aa00"
-                                radius: 4
-                            }
-
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                font.pixelSize: 10
-                            }
-
-                            onClicked: bluetoothManager.connectDevice(modelData.address)
-                        }
-
-                        Button {
-                            text: "Unpair"
-                            width: 75
-                            height: 30
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            background: Rectangle {
-                                color: parent.pressed ? "#803030" : "#ff4444"
-                                radius: 4
-                            }
-
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                font.pixelSize: 10
-                            }
-
-                            onClicked: bluetoothManager.unpairDevice(modelData.address)
-                        }
-                    }
-                }
-            }
-
-            Text {
-                anchors.centerIn: parent
-                text: "No paired devices"
-                color: "#666666"
-                font.pixelSize: 14
-                visible: pairedList.count === 0
-            }
-        }
-
-        // Available devices
-        Text {
-            text: "Available Devices"
-            color: "#ffffff"
-            font.pixelSize: 16
-            font.bold: true
-        }
-
-        Rectangle {
-            width: parent.width
-            height: 250
-            color: "#2a2a2a"
-            radius: 8
-
-            ListView {
-                id: availableList
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 5
-                clip: true
-
-                model: bluetoothManager.availableDevices
-
-                delegate: Rectangle {
-                    width: availableList.width
-                    height: 55
-                    color: "#1a1a1a"
-                    radius: 5
-
-                    Row {
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 15
-
-                        Text {
-                            text: "📱"
-                            font.pixelSize: 20
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 2
-
-                            Text {
-                                text: modelData.name
-                                color: "#ffffff"
-                                font.pixelSize: 13
-                                font.bold: true
-                            }
-
-                            Text {
-                                text: modelData.address
-                                color: "#888888"
-                                font.pixelSize: 10
-                            }
-                        }
-
-                        Item { width: parent.width - 250 }
-
-                        Button {
-                            text: "Pair"
-                            width: 80
-                            height: 35
-                            anchors.verticalCenter: parent.verticalCenter
-
-                            background: Rectangle {
-                                color: parent.pressed ? "#305060" : "#0088cc"
-                                radius: 4
-                            }
-
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                font.pixelSize: 11
-                            }
-
-                            onClicked: bluetoothManager.pairDevice(modelData.address)
-                        }
-                    }
-                }
-            }
 
             Column {
-                anchors.centerIn: parent
-                spacing: 10
-                visible: availableList.count === 0 && !bluetoothManager.isScanning
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 15
 
                 Text {
-                    text: bluetoothManager.isEnabled ?
-                          "No devices found\nClick 'Scan' to search" :
-                          "Bluetooth is disabled"
-                    color: "#666666"
-                    font.pixelSize: 14
-                    horizontalAlignment: Text.AlignHCenter
-                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Pair with " + pairingDeviceName + "?"
+                    font.pixelSize: 16
+                    color: "white"
                 }
-            }
 
-            BusyIndicator {
-                anchors.centerIn: parent
-                running: bluetoothManager.isScanning
-                visible: running
+                Text {
+                    text: "Do you want to pair with this device?"
+                    font.pixelSize: 14
+                    color: "white"
+                }
+
+                Row {
+                    spacing: 20
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    Button {
+                        text: "Cancel"
+                        onClicked: pairConfirmPopup.close()
+                    }
+
+                    Button {
+                        text: "Pair"
+                        onClicked: {
+                            pairConfirmPopup.close()
+                            bluetoothManager.pairDevice(pairingDeviceId)
+                        }
+                    }
+                }
             }
         }
     }

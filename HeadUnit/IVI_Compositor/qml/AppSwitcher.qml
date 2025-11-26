@@ -27,10 +27,19 @@ Rectangle {
             height: 50
 
             background: Rectangle {
-                color: surfaceManager.currentRightApp === 0 ? "#0078d7" : "#404040"
+                color: {
+                    if (homeButton.pressed) return theme.buttonPressedColor
+                    if (homeButton.hovered) return theme.buttonHoverColor
+                    if (surfaceManager.currentRightApp === 0) return theme.themeColor
+                    return "#404040"
+                }
                 radius: 5
-                border.color: "#606060"
-                border.width: 1
+                border.color: theme.accentColor
+                border.width: surfaceManager.currentRightApp === 0 ? 2 : 1
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
             }
 
             contentItem: Column {
@@ -62,10 +71,19 @@ Rectangle {
             height: 50
 
             background: Rectangle {
-                color: surfaceManager.currentRightApp === 1002 ? "#0078d7" : "#404040"
+                color: {
+                    if (mediaButton.pressed) return theme.buttonPressedColor
+                    if (mediaButton.hovered) return theme.buttonHoverColor
+                    if (surfaceManager.currentRightApp === 1002) return theme.themeColor
+                    return "#404040"
+                }
                 radius: 5
-                border.color: "#606060"
-                border.width: 1
+                border.color: theme.accentColor
+                border.width: surfaceManager.currentRightApp === 1002 ? 2 : 1
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
             }
 
             contentItem: Column {
@@ -97,10 +115,19 @@ Rectangle {
             height: 50
 
             background: Rectangle {
-                color: surfaceManager.currentRightApp === 1003 ? "#0078d7" : "#404040"
+                color: {
+                    if (themeButton.pressed) return theme.buttonPressedColor
+                    if (themeButton.hovered) return theme.buttonHoverColor
+                    if (surfaceManager.currentRightApp === 1003) return theme.themeColor
+                    return "#404040"
+                }
                 radius: 5
-                border.color: "#606060"
-                border.width: 1
+                border.color: theme.accentColor
+                border.width: surfaceManager.currentRightApp === 1003 ? 2 : 1
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
             }
 
             contentItem: Column {
@@ -132,10 +159,19 @@ Rectangle {
             height: 50
 
             background: Rectangle {
-                color: surfaceManager.currentRightApp === 1004 ? "#0078d7" : "#404040"
+                color: {
+                    if (navButton.pressed) return theme.buttonPressedColor
+                    if (navButton.hovered) return theme.buttonHoverColor
+                    if (surfaceManager.currentRightApp === 1004) return theme.themeColor
+                    return "#404040"
+                }
                 radius: 5
-                border.color: "#606060"
-                border.width: 1
+                border.color: theme.accentColor
+                border.width: surfaceManager.currentRightApp === 1004 ? 2 : 1
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
             }
 
             contentItem: Column {
@@ -160,17 +196,26 @@ Rectangle {
             onClicked: switchToApp(1004)
         }
 
-        // YouTube Button
+        // Settings Button
         Button {
-            id: youtubeButton
+            id: settingsButton
             width: 100
             height: 50
 
             background: Rectangle {
-                color: surfaceManager.currentRightApp === 1005 ? "#0078d7" : "#404040"
+                color: {
+                    if (settingsButton.pressed) return theme.buttonPressedColor
+                    if (settingsButton.hovered) return theme.buttonHoverColor
+                    if (surfaceManager.currentRightApp === 1005) return theme.themeColor
+                    return "#404040"
+                }
                 radius: 5
-                border.color: "#606060"
-                border.width: 1
+                border.color: theme.accentColor
+                border.width: surfaceManager.currentRightApp === 1005 ? 2 : 1
+
+                Behavior on color {
+                    ColorAnimation { duration: 150 }
+                }
             }
 
             contentItem: Column {

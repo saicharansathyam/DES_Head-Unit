@@ -5,7 +5,7 @@
 #include <QQuickStyle>
 #include <QDebug>
 #include "mp_handler.h"
-
+#include "../theme_client.h"
 int main(int argc, char *argv[])
 {
     // IMPORTANT: Enable virtual keyboard BEFORE creating QGuiApplication
@@ -23,6 +23,8 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle("Fusion");
     QGuiApplication app(argc, argv);
 
+    ThemeClient themeClient;
+
     app.setApplicationName("MediaPlayer");
     app.setOrganizationName("HeadUnit");
 
@@ -30,6 +32,7 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("mpHandler", &handler);
+    engine.rootContext()->setContextProperty("theme", &themeClient);
 
     // Load Main.qml from resources
     const QUrl url(QStringLiteral("qrc:/qml/Main.qml"));

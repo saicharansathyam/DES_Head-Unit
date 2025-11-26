@@ -22,6 +22,7 @@ set(SOURCES
     settingsmanager.cpp
     wifimanager.cpp
     bluetoothmanager.cpp
+    ../theme_client.cpp
 )
 
 # Header files
@@ -29,6 +30,7 @@ set(HEADERS
     settingsmanager.h
     wifimanager.h
     bluetoothmanager.h
+    ../theme_client.h
 )
 
 # Create resources file

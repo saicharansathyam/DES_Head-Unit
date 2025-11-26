@@ -22,12 +22,12 @@ QtObject {
             // FIXED: Use property bindings to avoid -1 width issue
             width: {
                 if (iviId === 1001) return 200
-                return 824
+                return 820
             }
 
             height: {
-                if (iviId === 1001) return 415
-                return 470  // 550 - 80 for AppSwitcher
+                if (iviId === 1001) return 450
+                return 450  // 550 - 80 for AppSwitcher
             }
 
             visible: {
