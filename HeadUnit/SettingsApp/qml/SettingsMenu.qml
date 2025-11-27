@@ -43,12 +43,12 @@ Rectangle {
         }
 
         MenuButton {
-            textLabel: "Sound"
-            iconText: "🔊"
-            selected: settingsMenu.currentPage === "SoundSettings"
+            textLabel: "Date & Time"
+            iconText: "🕐"
+            selected: settingsMenu.currentPage === "TimeSettings"
             onClicked: {
-                settingsMenu.currentPage = "SoundSettings"
-                settingsMenu.menuItemClicked("SoundSettings")
+                settingsMenu.currentPage = "TimeSettings"
+                settingsMenu.menuItemClicked("TimeSettings")
             }
         }
     }
