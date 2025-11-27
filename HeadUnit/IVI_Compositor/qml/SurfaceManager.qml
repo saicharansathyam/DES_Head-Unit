@@ -20,6 +20,7 @@ QtObject {
             property int iviId: shellSurface ? shellSurface.iviId : 0
 
             // FIXED: Use property bindings to avoid -1 width issue
+            // Adjusted height to account for keyboard appearance (dynamic sizing)
             width: {
                 if (iviId === 1001) return 200
                 return 820
@@ -27,7 +28,9 @@ QtObject {
 
             height: {
                 if (iviId === 1001) return 450
-                return 450  // 550 - 80 for AppSwitcher
+                // Right panel apps: 550 (panel height) - 80 (AppSwitcher)
+                // This gives 470px for content, which will shrink when keyboard appears
+                return 470
             }
 
             visible: {

@@ -11,7 +11,7 @@
 int main(int argc, char *argv[])
 {
     // IMPORTANT: Enable virtual keyboard BEFORE creating QGuiApplication
-    qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
+    //qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
 
     // Initialize QtWebView
     QtWebView::initialize();

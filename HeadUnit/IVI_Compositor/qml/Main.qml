@@ -6,7 +6,17 @@ import QtWayland.Compositor.IviApplication
 WaylandCompositor {
     id: waylandCompositor
 
-    socketName: "wayland-1"  // Keep wayland-1
+    socketName: "wayland-1"
+
+    /*// Text Input Manager for virtual keyboard support
+    TextInputManager {
+        id: textInputManager
+    }
+
+    // QtTextInputMethodManager for Qt Virtual Keyboard integration
+    QtTextInputMethodManager {
+        id: qtTextInputMethodManager
+    }*/
 
     // IVI Application extension
     IviApplication {
@@ -67,7 +77,7 @@ WaylandCompositor {
                     anchors.left: parent.left
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
-                    width: 200  // Keep 200px
+                    width: 200
                 }
 
                 // Right panel - HomeView / Apps + AppSwitcher
@@ -110,7 +120,7 @@ WaylandCompositor {
                         } else {
                             // Application is not running, request launch and mark for auto-switch
                             console.log("App not running - requesting launch with auto-switch")
-                            surfaceManager.setPendingLaunch(appId)  // NEW: Mark for auto-switch
+                            surfaceManager.setPendingLaunch(appId)
                             requestAppLaunch(appId)
                             console.log("Launch requested for", appName)
                         }
@@ -194,6 +204,7 @@ WaylandCompositor {
         console.log("Left panel: 200px")
         console.log("Right panel: 824px")
         console.log("Starting on: HomeView")
+        console.log("Text Input Manager enabled")
         console.log("=================================")
 
         // Launch GearSelector on startup

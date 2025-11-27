@@ -160,7 +160,7 @@ void BluetoothManager::handleDeviceDiscovered(const QBluetoothDeviceInfo &device
 
     // Check if device already in list
     bool found = false;
-    for (const QVariant &var : m_availableDevices) {
+    for (const QVariant &var : std::as_const(m_availableDevices)) {
         QVariantMap existing = var.toMap();
         if (existing["address"].toString() == deviceMap["address"].toString()) {
             found = true;
@@ -210,7 +210,7 @@ void BluetoothManager::updatePairedDevices()
     if (m_localDevice && m_localDevice->isValid()) {
         QList<QBluetoothAddress> pairedAddresses = m_localDevice->connectedDevices();
 
-        for (const QBluetoothAddress &address : pairedAddresses) {
+        for (const QBluetoothAddress &address : std::as_const(pairedAddresses)) {
             QVariantMap device;
             device["address"] = address.toString();
             device["name"] = m_localDevice->pairingStatus(address) == QBluetoothLocalDevice::Paired

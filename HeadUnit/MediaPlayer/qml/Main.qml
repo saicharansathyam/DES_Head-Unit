@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.VirtualKeyboard
 
 ApplicationWindow {
     id: mainWindow
@@ -147,12 +148,12 @@ ApplicationWindow {
                     }
                 }
 
-                // Playlist Toggle Button (only for USB/Bluetooth)
+                // Playlist Toggle Button (only for USB)
                 Button {
                     id: playlistButton
                     width: 50
                     height: 40
-                    visible: currentSource !== "YouTube"
+                    visible: currentSource === "USB"
                     anchors.verticalCenter: parent.verticalCenter
 
                     background: Rectangle {
@@ -191,7 +192,7 @@ ApplicationWindow {
                 height: parent.height - 90
 
                 sourceComponent: currentSource === "YouTube" ? youtubeContext :
-                                 (showPlaylist ? playlistContext : mediaDisplayContext)
+                                (showPlaylist && currentSource === "USB" ? playlistContext : mediaDisplayContext)
 
                 Component {
                     id: mediaDisplayContext
@@ -255,5 +256,15 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    // Virtual Keyboard - appears at bottom when text input is focused
+    InputPanel {
+        id: inputPanel
+        z: 99
+        x: 0
+        y: mainWindow.height - inputPanel.height
+        width: mainWindow.width
+        visible: active
     }
 }

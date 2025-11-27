@@ -11,6 +11,9 @@ int main(int argc, char *argv[])
 {
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
 
+    // Enable virtual keyboard for the compositor
+    qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
+
     QGuiApplication app(argc, argv);
     app.setOrganizationName("HeadUnit");
     app.setOrganizationDomain("com.headunit");

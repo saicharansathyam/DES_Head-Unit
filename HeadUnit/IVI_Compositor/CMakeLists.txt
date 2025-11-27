@@ -13,9 +13,9 @@ find_package(Qt6 REQUIRED COMPONENTS
     Qml
     Quick
     WaylandCompositor
+    DBus
+    VirtualKeyboard
 )
-find_package(Qt6 REQUIRED COMPONENTS Core)
-find_package(Qt6 REQUIRED COMPONENTS DBus)
 
 # Create resources file
 qt_add_resources(RESOURCES qml.qrc)
@@ -35,9 +35,9 @@ target_link_libraries(headUnit PRIVATE
     Qt6::Qml
     Qt6::Quick
     Qt6::WaylandCompositor
+    Qt6::DBus
+    Qt6::VirtualKeyboard
 )
-target_link_libraries(headUnit PRIVATE Qt6::Core)
-target_link_libraries(headUnit PRIVATE Qt6::DBus)
 
 # Compiler flags
 target_compile_options(headUnit PRIVATE
@@ -49,4 +49,3 @@ target_compile_options(headUnit PRIVATE
 install(TARGETS headUnit
     RUNTIME DESTINATION bin
 )
-

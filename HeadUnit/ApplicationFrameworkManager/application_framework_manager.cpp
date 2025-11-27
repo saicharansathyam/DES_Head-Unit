@@ -15,7 +15,7 @@
 // ============================================================================
 
 void ApplicationFrameworkManager::binExtracted() {
-    for (const QString &path : m_binarySearchPaths) {
+    for (const QString &path : std::as_const(m_binarySearchPaths)) {
         logInfo(QString("  - %1").arg(path));
     }
 }
@@ -88,7 +88,7 @@ QString ApplicationFrameworkManager::findApplicationBinary(const QString &appNam
 {
     logInfo(QString("Searching for binary: %1").arg(appName));
 
-    for (const QString &searchPath : m_binarySearchPaths) {
+    for (const QString &searchPath : std::as_const(m_binarySearchPaths)) {
         QString fullPath = QDir(searchPath).filePath(appName);
         QFileInfo fileInfo(fullPath);
 
@@ -147,11 +147,11 @@ void ApplicationFrameworkManager::setupApplicationRegistry()
 
     logInfo(QString("Registered %1 applications").arg(m_applications.size()));
 
-    for (const auto &app : m_applications) {
+    for (const auto &app : std::as_const(m_applications)) {
         if (app.binaryPath.isEmpty()) {
             logWarning(QString("  %1 - BINARY NOT FOUND").arg(app.displayName));
         } else {
-            logInfo(QString("  %1 - %2").arg(app.displayName).arg(app.binaryPath));
+            logInfo(QString("  %1 - %2").arg(app.displayName, app.binaryPath));
         }
     }
 }
@@ -214,12 +214,6 @@ void ApplicationFrameworkManager::launchInitialApplications()
     // Launch GearSelector (persistent, always-on)
     logInfo("Auto-launching GearSelector");
     launchApp(1001);
-
-    // Optionally launch MediaPlayer after a short delay
-    QTimer::singleShot(1500, this, [this]() {
-        logInfo("Auto-launching MediaPlayer");
-        launchApp(1002);
-    });
 }
 
 void ApplicationFrameworkManager::launchApp(int iviId)
@@ -351,7 +345,7 @@ QString ApplicationFrameworkManager::getAppState(int iviId)
 QList<int> ApplicationFrameworkManager::getRunningApps()
 {
     QList<int> runningApps;
-    for (const auto &appInfo : m_applications) {
+    for (const auto &appInfo : std::as_const(m_applications)) {
         if (appInfo.state == "running" || appInfo.state == "active") {
             runningApps.append(appInfo.iviId);
         }
@@ -460,11 +454,19 @@ QProcessEnvironment ApplicationFrameworkManager::createAppEnvironment(int iviId)
     env.insert("QT_LOGGING_RULES", "qt.qpa.wayland*=false");
     // env.insert("QT_DEBUG_PLUGINS", "1");  // Uncomment for debug
 
+    if(iviId == 1002){
+        env.insert("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
+
+    }
+
     logInfo(QString("Environment for %1 (IVI-ID: %2):").arg(getAppInfo(iviId)->name).arg(iviId));
     logInfo(QString("  XDG_RUNTIME_DIR: %1").arg(xdgRuntime));
     logInfo(QString("  WAYLAND_DISPLAY: wayland-1"));
     logInfo(QString("  QT_IVI_SURFACE_ID: %1").arg(iviId));
     logInfo(QString("  QT_QPA_PLATFORM: wayland"));
+    if(iviId == 1002){
+        logInfo(QString("QT_IM_MODULE set for MediaPlayer"));
+    }
 
     return env;
 }
@@ -494,7 +496,7 @@ void ApplicationFrameworkManager::onProcessFinished(int exitCode, QProcess::Exit
         if (appInfo.process == process) {
             QString statusStr = (status == QProcess::NormalExit) ? "normally" : "crashed";
             logInfo(QString("%1 finished %2 (exit code: %3)")
-                        .arg(appInfo.name).arg(statusStr).arg(exitCode));
+                        .arg(appInfo.name, statusStr).arg(exitCode));
 
             updateAppState(appInfo.iviId, "stopped");
             appInfo.pid = 0;
@@ -511,7 +513,7 @@ void ApplicationFrameworkManager::onProcessError(QProcess::ProcessError error)
     for (auto &appInfo : m_applications) {
         if (appInfo.process == process) {
             logError(QString("%1 process error: %2")
-                         .arg(appInfo.name).arg(process->errorString()));
+                         .arg(appInfo.name, process->errorString()));
 
             // Additional diagnostics
             if (error == QProcess::FailedToStart) {
@@ -541,9 +543,9 @@ void ApplicationFrameworkManager::onProcessStateChanged(QProcess::ProcessState n
     case QProcess::Running: stateStr = "Running"; break;
     }
 
-    for (const auto &appInfo : m_applications) {
+    for (const auto &appInfo : std::as_const(m_applications)) {
         if (appInfo.process == process) {
-            logInfo(QString("%1 process state: %2").arg(appInfo.name).arg(stateStr));
+            logInfo(QString("%1 process state: %2").arg(appInfo.name, stateStr));
             break;
         }
     }
@@ -585,7 +587,7 @@ void ApplicationFrameworkManager::updateAppState(int iviId, const QString &newSt
         QString oldState = appInfo->state;
         appInfo->state = newState;
         logInfo(QString("%1 state: %2 -> %3")
-                    .arg(appInfo->name).arg(oldState).arg(newState));
+                    .arg(appInfo->name, oldState, newState));
 
         if (m_dbusAdaptor) {
             emit m_dbusAdaptor->StateChanged(iviId, newState);
@@ -596,7 +598,7 @@ void ApplicationFrameworkManager::updateAppState(int iviId, const QString &newSt
 void ApplicationFrameworkManager::logInfo(const QString &message)
 {
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    QString logMessage = QString("[%1] [INFO] %2").arg(timestamp).arg(message);
+    QString logMessage = QString("[%1] [INFO] %2").arg(timestamp, message);
 
     qInfo().noquote() << logMessage;
 
@@ -611,7 +613,7 @@ void ApplicationFrameworkManager::logInfo(const QString &message)
 void ApplicationFrameworkManager::logWarning(const QString &message)
 {
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    QString logMessage = QString("[%1] [WARN] %2").arg(timestamp).arg(message);
+    QString logMessage = QString("[%1] [WARN] %2").arg(timestamp, message);
 
     qWarning().noquote() << logMessage;
 
@@ -626,7 +628,7 @@ void ApplicationFrameworkManager::logWarning(const QString &message)
 void ApplicationFrameworkManager::logError(const QString &message)
 {
     QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
-    QString logMessage = QString("[%1] [ERROR] %2").arg(timestamp).arg(message);
+    QString logMessage = QString("[%1] [ERROR] %2").arg(timestamp, message);
 
     qCritical().noquote() << logMessage;
 
