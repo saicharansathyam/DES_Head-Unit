@@ -140,7 +140,7 @@ void ApplicationFrameworkManager::setupApplicationRegistry()
                         findApplicationBinary("ThemeColor"), "ThemeColor");
 
     registerApplication(1004, "Navigation", "Navigation",
-                        findApplicationBinary("Navigation"), "Navigation");
+                        findApplicationBinary("appNavigationGM"), "Navigation");
 
     registerApplication(1005, "Settings", "Settings",
                         findApplicationBinary("Settings"), "Settings");
@@ -454,7 +454,7 @@ QProcessEnvironment ApplicationFrameworkManager::createAppEnvironment(int iviId)
     env.insert("QT_LOGGING_RULES", "qt.qpa.wayland*=false");
     // env.insert("QT_DEBUG_PLUGINS", "1");  // Uncomment for debug
 
-    if(iviId == 1002){
+    if(iviId == 1002 || iviId == 1004){
         env.insert("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
 
     }
@@ -466,6 +466,9 @@ QProcessEnvironment ApplicationFrameworkManager::createAppEnvironment(int iviId)
     logInfo(QString("  QT_QPA_PLATFORM: wayland"));
     if(iviId == 1002){
         logInfo(QString("QT_IM_MODULE set for MediaPlayer"));
+    }
+    if(iviId == 1004){
+        logInfo(QString("QT_IM_MODULE set for Navigation"));
     }
 
     return env;

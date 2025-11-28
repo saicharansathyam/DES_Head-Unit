@@ -161,7 +161,6 @@ class MediaPlayerService(dbus.service.Object):
         self.source = ""
         self.source_type = "usb"
         self.state = "Stopped"
-        self.volume = 50
         self.position = 0
         self.duration = 0
         
@@ -179,7 +178,6 @@ class MediaPlayerService(dbus.service.Object):
         if HAS_VLC:
             self.instance = vlc.Instance('--no-xlib')
             self.player = self.instance.media_player_new()
-            self.player.audio_set_volume(self.volume)
         else:
             self.instance = None
             self.player = None
@@ -441,13 +439,7 @@ class MediaPlayerService(dbus.service.Object):
             self.PositionChanged(dbus.Int64(self.position))
             print(f"Seeked to: {position}ms")
     
-    @dbus.service.method(INTERFACE_NAME, in_signature='i', out_signature='')
-    def SetVolume(self, volume):
-        """Set volume"""
-        self.volume = max(0, min(100, volume))
-        if self.player:
-            self.player.audio_set_volume(self.volume)
-        print(f"Volume: {self.volume}")
+
     
     @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='')
     def Next(self):

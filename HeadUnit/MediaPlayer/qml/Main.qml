@@ -189,7 +189,7 @@ ApplicationWindow {
             Loader {
                 id: contextLoader
                 width: parent.width
-                height: parent.height - 90
+                height: parent.height - 40
 
                 sourceComponent: currentSource === "YouTube" ? youtubeContext :
                                 (showPlaylist && currentSource === "USB" ? playlistContext : mediaDisplayContext)

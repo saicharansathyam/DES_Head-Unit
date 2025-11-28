@@ -10,7 +10,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick DBus)
 
 qt_add_resources(RESOURCES qml.qrc)
 
-add_executable(settingsApp
+add_executable(Settings
     main.cpp
     dbus_handler.h
     dbus_handler.cpp
@@ -19,7 +19,7 @@ add_executable(settingsApp
     ${RESOURCES}
 )
 
-target_link_libraries(settingsApp PRIVATE
+target_link_libraries(Settings PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Qml
@@ -27,6 +27,6 @@ target_link_libraries(settingsApp PRIVATE
     Qt6::DBus
 )
 
-target_compile_options(settingsApp PRIVATE -Wall -Wextra)
+target_compile_options(Settings PRIVATE -Wall -Wextra)
 
-install(TARGETS settingsApp RUNTIME DESTINATION bin)
+install(TARGETS Settings RUNTIME DESTINATION bin)

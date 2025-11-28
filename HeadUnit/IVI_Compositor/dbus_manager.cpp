@@ -8,16 +8,20 @@ DBusManager::DBusManager(QObject *parent)
     , m_sessionBus(QDBusConnection::sessionBus())
     , m_afmInterface(nullptr)
     , m_wmInterface(nullptr)
+    , m_settingsInterface(nullptr)
     , m_afmConnected(false)
+    , m_systemVolume(50)
 {
     setupAFMConnection();
     setupWindowManagerConnection();
+    setupSettingsConnection();
 }
 
 DBusManager::~DBusManager()
 {
     delete m_afmInterface;
     delete m_wmInterface;
+    delete m_settingsInterface;
 }
 
 void DBusManager::setupAFMConnection()
@@ -92,6 +96,40 @@ void DBusManager::setupWindowManagerConnection()
         qWarning() << "[DBusManager] WindowManager not available (optional)";
     } else {
         qInfo() << "[DBusManager] Connected to WindowManager D-Bus interface";
+    }
+}
+
+void DBusManager::setupSettingsConnection()
+{
+    m_settingsInterface = new QDBusInterface(
+        "com.headunit.SettingsService",
+        "/com/headunit/Settings",
+        "com.headunit.Settings",
+        m_sessionBus,
+        this
+        );
+
+    if (!m_settingsInterface->isValid()) {
+        qWarning() << "[DBusManager] SettingsService not available:" 
+                   << m_sessionBus.lastError().message();
+    } else {
+        qInfo() << "[DBusManager] Connected to SettingsService D-Bus interface";
+        
+        // Connect to volume change signals
+        m_sessionBus.connect(
+            "com.headunit.SettingsService",
+            "/com/headunit/Settings",
+            "com.headunit.Settings",
+            "SystemVolumeChanged",
+            this,
+            SLOT(onSystemVolumeChanged(int))
+            );
+        
+        // Get initial volume
+        QDBusReply<int> reply = m_settingsInterface->call("GetSystemVolume");
+        if (reply.isValid()) {
+            m_systemVolume = reply.value();
+        }
     }
 }
 
@@ -202,5 +240,45 @@ void DBusManager::onAFMAppTerminated(int iviId)
 {
     qInfo() << "[DBusManager] AFM terminated app:" << iviId;
     emit appTerminated(iviId);
+}
+
+void DBusManager::setSystemVolume(int volume)
+{
+    if (!m_settingsInterface || !m_settingsInterface->isValid()) {
+        qWarning() << "[DBusManager] SettingsService not available for volume control";
+        return;
+    }
+    
+    volume = qBound(0, volume, 100);
+    qInfo() << "[DBusManager] Setting system volume to:" << volume;
+    
+    QDBusReply<void> reply = m_settingsInterface->call("SetSystemVolume", volume);
+    
+    if (!reply.isValid()) {
+        qWarning() << "[DBusManager] Failed to set volume:" << reply.error().message();
+    }
+}
+
+int DBusManager::getSystemVolume()
+{
+    if (!m_settingsInterface || !m_settingsInterface->isValid()) {
+        qWarning() << "[DBusManager] SettingsService not available for volume control";
+        return m_systemVolume;
+    }
+    
+    QDBusReply<int> reply = m_settingsInterface->call("GetSystemVolume");
+    
+    if (reply.isValid()) {
+        m_systemVolume = reply.value();
+    }
+    
+    return m_systemVolume;
+}
+
+void DBusManager::onSystemVolumeChanged(int volume)
+{
+    qDebug() << "[DBusManager] System volume changed to:" << volume;
+    m_systemVolume = volume;
+    emit systemVolumeChanged(volume);
 }
 
