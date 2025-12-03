@@ -3,27 +3,28 @@ DESCRIPTION = "Vehicle gear selection interface with D-Bus integration"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
 
-# Build dependencies
 DEPENDS = " \
     qtbase \
     qtdeclarative \
     qtdeclarative-native \
 "
 
-# Source files - Include ALL files your app needs
 SRC_URI = " \
     file://main.cpp \
     file://gs_handler.cpp \
     file://gs_handler.h \
     file://CMakeLists.txt \
     file://Main.qml \
+    file://gearselector.service \
 "
 
 S = "${WORKDIR}"
 
-inherit qt6-cmake
+inherit qt6-cmake systemd
 
-# CMake configuration
+SYSTEMD_SERVICE:${PN} = "gearselector.service"
+SYSTEMD_AUTO_ENABLE = "enable"
+
 EXTRA_OECMAKE += " \
     -DCMAKE_BUILD_TYPE=Release \
     -DQT_QPA_PLATFORM=wayland \
@@ -32,25 +33,31 @@ EXTRA_OECMAKE += " \
 do_install() {
     # Install binary
     install -d ${D}${bindir}
-    install -m 0755 ${B}/GearSelector ${D}${bindir}/
+    install -m 0755 ${B}/GearSelector ${D}${bindir}/gearselector
     
-    # Install application metadata (optional but recommended)
+    # Install systemd service
+    install -d ${D}${systemd_system_unitdir}
+    install -m 0644 ${WORKDIR}/gearselector.service ${D}${systemd_system_unitdir}/
+    
+    # Install application metadata
     install -d ${D}${datadir}/headunit/apps
-    echo '[Desktop Entry]' > ${D}${datadir}/headunit/apps/gearselector.desktop
-    echo 'Name=Gear Selector' >> ${D}${datadir}/headunit/apps/gearselector.desktop
-    echo 'IviID=1001' >> ${D}${datadir}/headunit/apps/gearselector.desktop
-    echo 'Role=GearSelector' >> ${D}${datadir}/headunit/apps/gearselector.desktop
-    echo 'BinaryPath=/usr/bin/GearSelector' >> ${D}${datadir}/headunit/apps/gearselector.desktop
-    echo 'Icon=gear-selector' >> ${D}${datadir}/headunit/apps/gearselector.desktop
-    echo 'Categories=Vehicle;' >> ${D}${datadir}/headunit/apps/gearselector.desktop
+    cat > ${D}${datadir}/headunit/apps/gearselector.desktop << EOF
+[Desktop Entry]
+Name=Gear Selector
+IviID=1001
+Role=GearSelector
+BinaryPath=/usr/bin/gearselector
+Icon=gear-selector
+Categories=Vehicle;
+EOF
 }
 
 FILES:${PN} = " \
-    ${bindir}/GearSelector \
+    ${bindir}/gearselector \
+    ${systemd_system_unitdir}/gearselector.service \
     ${datadir}/headunit/apps/gearselector.desktop \
 "
 
-# Runtime dependencies
 RDEPENDS:${PN} += " \
     qtbase \
     qtdeclarative \
@@ -58,5 +65,10 @@ RDEPENDS:${PN} += " \
     qtwayland-plugins \
 "
 
-# Ensure Wayland protocol support
 PACKAGECONFIG:append:pn-qtbase = " wayland"
+# AFM compatibility: Create capitalized symlink
+do_install:append() {
+    ln -sf gearselector ${D}${bindir}/GearSelector
+}
+
+FILES:${PN} += "${bindir}/GearSelector"

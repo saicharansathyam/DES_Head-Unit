@@ -1,23 +1,30 @@
 [Unit]
 Description=Head Unit Application Framework Manager
-After=dbus.service
+After=dbus.service compositor.service
 Requires=dbus.service
+Wants=compositor.service
 
 [Service]
 Type=simple
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/headunit-afm
 Restart=always
 RestartSec=5
 
-# Environment variables
-Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
-Environment="XDG_RUNTIME_DIR=/run/user/0"
-Environment="QT_QPA_PLATFORM=offscreen"
+# CRITICAL: Use system bus instead of session bus
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket"
+
+# Wayland compositor socket (nested compositor creates wayland-2)
+Environment="XDG_RUNTIME_DIR=/run"
+Environment="WAYLAND_DISPLAY=wayland-2"
+
+# Qt configuration for launching apps
+Environment="QT_QPA_PLATFORM=wayland"
+Environment="QT_WAYLAND_SHELL_INTEGRATION=ivi-shell"
 Environment="QT_QUICK_BACKEND=software"
 
-# Logging
 StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target

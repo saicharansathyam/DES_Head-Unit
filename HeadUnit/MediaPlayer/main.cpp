@@ -1,7 +1,6 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QtWebView/QtWebView>
 #include <QQuickStyle>
 #include <QDebug>
 #include "mp_handler.h"
@@ -10,9 +9,6 @@ int main(int argc, char *argv[])
 {
     // IMPORTANT: Enable virtual keyboard BEFORE creating QGuiApplication
     qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
-
-    // Initialize QtWebView
-    QtWebView::initialize();
 
     // Set Wayland environment
     qputenv("QT_QPA_PLATFORM", "wayland");
@@ -49,6 +45,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    qDebug() << "MediaPlayer with QtWebView and Virtual Keyboard started successfully";
+    qDebug() << "MediaPlayer with Virtual Keyboard started successfully";
     return app.exec();
 }

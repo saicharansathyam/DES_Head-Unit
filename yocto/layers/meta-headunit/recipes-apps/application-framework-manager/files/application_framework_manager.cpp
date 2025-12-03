@@ -1,32 +1,44 @@
 // application_framework_manager.cpp
+
 #include "application_framework_manager.h"
-#include <QDBusConnection>
-#include <QDBusError>
-#include <QProcessEnvironment>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
+#include <QCoreApplication>
+#include <QDBusConnection>
 #include <QTextStream>
+#include <QThread>
 #include <QDateTime>
-#include <QDebug>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonArray>
+#include <QDBusError>
 
 // ============================================================================
 // ApplicationFrameworkManager Implementation
 // ============================================================================
 
+void ApplicationFrameworkManager::binExtracted() {
+    for (const QString &path : m_binarySearchPaths) {
+        logInfo(QString("  - %1").arg(path));
+    }
+}
 ApplicationFrameworkManager::ApplicationFrameworkManager(QObject *parent)
-    : QObject(parent)
-    , m_dbusAdaptor(nullptr)
-    , m_watchdogTimer(nullptr)
-    , m_nextRunId(1)
-{
+    : QObject(parent), m_dbusAdaptor(nullptr), m_watchdogTimer(nullptr),
+    m_nextRunId(1) {
     logInfo("=== Application Framework Manager Starting ===");
 
     // Setup logging
     m_logFilePath = "./logs/afm.log";
     QDir().mkpath("./logs");
+
+    // Initialize binary search paths
+    QString absoluteDevPath =
+        "/home/seame/Documents/GitHub/DES_Head-Unit/HeadUnit/applications";
+
+    m_binarySearchPaths << absoluteDevPath;
+    m_binarySearchPaths << "/usr/local/bin";
+    m_binarySearchPaths << "/usr/bin";
+
+    logInfo("Binary search paths configured:");
+    binExtracted();
 
     // Load configuration and setup application registry
     loadConfiguration();
@@ -35,22 +47,27 @@ ApplicationFrameworkManager::ApplicationFrameworkManager(QObject *parent)
     // Register D-Bus service
     registerDBusService();
 
+    // Launch initial applications after a delay to let compositor start
+    QTimer::singleShot(5000, this, &ApplicationFrameworkManager::launchInitialApplications);
+
     // Setup watchdog timer for process monitoring
     m_watchdogTimer = new QTimer(this);
-    connect(m_watchdogTimer, &QTimer::timeout, this, &ApplicationFrameworkManager::onWatchdogTimeout);
-    m_watchdogTimer->start(5000);  // Check every 5 seconds
+    connect(m_watchdogTimer, &QTimer::timeout, this,
+            &ApplicationFrameworkManager::onWatchdogTimeout);
+    m_watchdogTimer->start(5000);
 
     logInfo("=== AFM Initialization Complete ===");
+    logInfo("Waiting for compositor to be ready before launching apps...");
 }
 
 ApplicationFrameworkManager::~ApplicationFrameworkManager()
 {
     logInfo("=== Application Framework Manager Shutting Down ===");
 
-    // Terminate all running applications
     for (auto &appInfo : m_applications) {
         if (appInfo.process && appInfo.process->state() != QProcess::NotRunning) {
-            logInfo(QString("Terminating %1 (PID: %2)").arg(appInfo.name).arg(appInfo.pid));
+            logInfo(QString("Terminating %1 (PID: %2)")
+                        .arg(appInfo.name).arg(appInfo.pid));
             appInfo.process->terminate();
             if (!appInfo.process->waitForFinished(3000)) {
                 appInfo.process->kill();
@@ -63,12 +80,37 @@ ApplicationFrameworkManager::~ApplicationFrameworkManager()
 
 void ApplicationFrameworkManager::loadConfiguration()
 {
-    // In production, load from JSON config file
-    // For now, using defaults
     logInfo("Loading application configuration...");
 }
 
-void ApplicationFrameworkManager::registerApplication(int iviId, const QString &name,
+QStringList ApplicationFrameworkManager::getSearchPaths()
+{
+    return m_binarySearchPaths;
+}
+
+QString ApplicationFrameworkManager::findApplicationBinary(const QString &appName)
+{
+    logInfo(QString("Searching for binary: %1").arg(appName));
+
+    for (const QString &searchPath : m_binarySearchPaths) {
+        QString fullPath = QDir(searchPath).filePath(appName);
+        QFileInfo fileInfo(fullPath);
+
+        logInfo(QString("  Checking: %1").arg(fullPath));
+
+        if (fileInfo.exists() && fileInfo.isFile() && fileInfo.isExecutable()) {
+            QString canonicalPath = fileInfo.canonicalFilePath();
+            logInfo(QString("  ✓ Found at: %1").arg(canonicalPath));
+            return canonicalPath;
+        }
+    }
+
+    logWarning(QString("  ✗ Binary not found in any search path: %1").arg(appName));
+    return QString();
+}
+
+void ApplicationFrameworkManager::registerApplication(int iviId,
+                                                      const QString &name,
                                                       const QString &displayName,
                                                       const QString &binaryPath,
                                                       const QString &role)
@@ -92,14 +134,30 @@ void ApplicationFrameworkManager::setupApplicationRegistry()
 {
     logInfo("Setting up application registry...");
 
-    registerApplication(1000, "HomePage", "Home Page", "./applications/HomePage", "HomePage");
-    registerApplication(1001, "GearSelector", "Gear Selector", "./applications/GearSelector", "GearSelector");
-    registerApplication(1002, "MediaPlayer", "Media Player", "./applications/MediaPlayer", "MediaPlayer");
-    registerApplication(1003, "ThemeColor", "Theme & Colors", "./applications/ThemeColor", "ThemeColor");
-    registerApplication(1004, "Navigation", "Navigation", "./applications/Navigation", "Navigation");
-    registerApplication(1005, "Settings", "Settings", "./applications/Settings", "Settings");
+    registerApplication(1001, "GearSelector", "Gear Selector",
+                        findApplicationBinary("GearSelector"), "GearSelector");
+
+    registerApplication(1002, "MediaPlayer", "Media Player",
+                        findApplicationBinary("MediaPlayer"), "MediaPlayer");
+
+    registerApplication(1003, "ThemeColor", "Theme & Colors",
+                        findApplicationBinary("ThemeColor"), "ThemeColor");
+
+    registerApplication(1004, "Navigation", "Navigation",
+                    findApplicationBinary("Navigation"), "Navigation");
+
+    registerApplication(1005, "Settings", "Settings",
+                        findApplicationBinary("Settings"), "Settings");
 
     logInfo(QString("Registered %1 applications").arg(m_applications.size()));
+
+    for (const auto &app : m_applications) {
+        if (app.binaryPath.isEmpty()) {
+            logWarning(QString("  %1 - BINARY NOT FOUND").arg(app.displayName));
+        } else {
+            logInfo(QString("  %1 - %2").arg(app.displayName).arg(app.binaryPath));
+        }
+    }
 }
 
 void ApplicationFrameworkManager::registerDBusService()
@@ -107,7 +165,6 @@ void ApplicationFrameworkManager::registerDBusService()
     logInfo("Registering D-Bus service...");
 
     m_dbusAdaptor = new ApplicationLifecycleDBus(this);
-
     QDBusConnection sessionBus = QDBusConnection::sessionBus();
 
     if (!sessionBus.registerService("com.headunit.AppLifecycle")) {
@@ -125,6 +182,54 @@ void ApplicationFrameworkManager::registerDBusService()
     logInfo("D-Bus service registered: com.headunit.AppLifecycle");
 }
 
+// NEW: Check if Wayland compositor is ready
+bool ApplicationFrameworkManager::isWaylandCompositorReady()
+{
+    QString xdgRuntime = qEnvironmentVariable("XDG_RUNTIME_DIR", "/tmp");
+    QString waylandSocket = QDir(xdgRuntime).filePath("wayland-1");
+
+    QFileInfo socketInfo(waylandSocket);
+    bool ready = socketInfo.exists() && socketInfo.isReadable();
+
+    if (ready) {
+        logInfo(QString("✓ Wayland compositor ready: %1").arg(waylandSocket));
+    } else {
+        logWarning(QString("✗ Wayland compositor not ready: %1").arg(waylandSocket));
+    }
+
+    return ready;
+}
+
+// NEW: Launch initial applications with compositor check
+void ApplicationFrameworkManager::launchInitialApplications()
+{
+    logInfo("=== Launching Initial Applications ===");
+    
+    // Check if Wayland compositor is ready
+    if (!isWaylandCompositorReady()) {
+        logWarning("Wayland compositor not ready, delaying app launch");
+        QTimer::singleShot(2000, this, &ApplicationFrameworkManager::launchInitialApplications);
+        return;
+    }
+    
+    // Launch apps that are marked as autostart in applications.json
+    for (auto it = m_applications.begin(); it != m_applications.end(); ++it) {
+        int iviId = it.key();
+        AppInfo &appInfo = it.value();
+        
+        // For now, launch GearSelector(1001), MediaPlayer(1002), ThemeColor(1003)
+        if (iviId == 1001 || iviId == 1002 || iviId == 1003) {
+            logInfo(QString("Auto-launching app: %1 (ID: %2)").arg(appInfo.displayName).arg(iviId));
+            launchApp(iviId);
+            
+            // Small delay between launches
+            QThread::msleep(1000);
+        }
+    }
+    
+    logInfo("=== Initial application launch complete ===");
+}
+
 void ApplicationFrameworkManager::launchApp(int iviId)
 {
     AppInfo *appInfo = getAppInfo(iviId);
@@ -133,7 +238,7 @@ void ApplicationFrameworkManager::launchApp(int iviId)
         return;
     }
 
-    // Check if already running - activate instead
+    // Check if already running
     if (appInfo->state == "running" || appInfo->state == "active") {
         logInfo(QString("%1 already running, activating instead").arg(appInfo->name));
         activateApp(iviId);
@@ -142,16 +247,34 @@ void ApplicationFrameworkManager::launchApp(int iviId)
 
     logInfo(QString("Launching %1 (IVI-ID: %2)").arg(appInfo->name).arg(iviId));
 
-    // Check if binary exists
+    // Check if binary path is valid
+    if (appInfo->binaryPath.isEmpty()) {
+        logError(QString("Binary path not set for %1 - attempting to find it...")
+                     .arg(appInfo->name));
+
+        QString foundPath = findApplicationBinary(appInfo->name);
+        if (!foundPath.isEmpty()) {
+            appInfo->binaryPath = foundPath;
+            logInfo(QString("Found binary at: %1").arg(foundPath));
+        } else {
+            logError(QString("Binary not found for %1").arg(appInfo->name));
+            return;
+        }
+    }
+
+    // Final check if binary exists
     if (!QFile::exists(appInfo->binaryPath)) {
         logError(QString("Binary not found: %1").arg(appInfo->binaryPath));
         return;
     }
 
-    // Update state
-    updateAppState(iviId, "launching");
+    // Check compositor again before launching
+    if (!isWaylandCompositorReady()) {
+        logError(QString("Cannot launch %1 - Wayland compositor not ready").arg(appInfo->name));
+        return;
+    }
 
-    // Start process
+    updateAppState(iviId, "launching");
     startProcess(appInfo);
 }
 
@@ -163,20 +286,14 @@ void ApplicationFrameworkManager::activateApp(int iviId)
         return;
     }
 
-    // If not running, launch instead
-    if (appInfo->state != "running" && appInfo->state != "paused") {
-        logInfo(QString("%1 not running, launching instead").arg(appInfo->name));
+    if (appInfo->state != "running") {
+        logInfo(QString("App %1 not running, launching instead").arg(appInfo->name));
         launchApp(iviId);
         return;
     }
 
-    logInfo(QString("Activating %1 (IVI-ID: %2)").arg(appInfo->name).arg(iviId));
-
-    // Update state to active
+    logInfo(QString("Activating %1").arg(appInfo->name));
     updateAppState(iviId, "active");
-
-    // Notify Window Manager (if available)
-    // This would send activateWindow request to WM service
 }
 
 void ApplicationFrameworkManager::terminateApp(int iviId)
@@ -187,66 +304,66 @@ void ApplicationFrameworkManager::terminateApp(int iviId)
         return;
     }
 
-    if (!appInfo->process || appInfo->state == "stopped") {
-        logWarning(QString("%1 is not running").arg(appInfo->name));
+    if (appInfo->state == "stopped") {
+        logInfo(QString("%1 is already stopped").arg(appInfo->name));
         return;
     }
 
-    logInfo(QString("Terminating %1 (PID: %2)").arg(appInfo->name).arg(appInfo->pid));
-
-    // Graceful termination
-    appInfo->process->terminate();
-
-    // Force kill after 3 seconds if not terminated
-    QTimer::singleShot(3000, this, [this, iviId]() {
-        AppInfo *info = getAppInfo(iviId);
-        if (info && info->process && info->process->state() != QProcess::NotRunning) {
-            logWarning(QString("Force killing %1").arg(info->name));
-            info->process->kill();
-        }
-    });
+    logInfo(QString("Terminating %1").arg(appInfo->name));
+    killProcess(appInfo);
 }
 
 void ApplicationFrameworkManager::pauseApp(int iviId)
 {
     AppInfo *appInfo = getAppInfo(iviId);
-    if (!appInfo || appInfo->state != "running") {
+    if (!appInfo) {
+        logWarning(QString("Pause request for unknown IVI-ID: %1").arg(iviId));
+        return;
+    }
+
+    if (appInfo->state != "active") {
+        logWarning(QString("Cannot pause %1 - not active").arg(appInfo->name));
         return;
     }
 
     logInfo(QString("Pausing %1").arg(appInfo->name));
     updateAppState(iviId, "paused");
-    emit m_dbusAdaptor->AppPaused(iviId);
 }
 
 void ApplicationFrameworkManager::resumeApp(int iviId)
 {
     AppInfo *appInfo = getAppInfo(iviId);
-    if (!appInfo || appInfo->state != "paused") {
+    if (!appInfo) {
+        logWarning(QString("Resume request for unknown IVI-ID: %1").arg(iviId));
+        return;
+    }
+
+    if (appInfo->state != "paused") {
+        logWarning(QString("Cannot resume %1 - not paused").arg(appInfo->name));
         return;
     }
 
     logInfo(QString("Resuming %1").arg(appInfo->name));
-    updateAppState(iviId, "running");
-    emit m_dbusAdaptor->AppResumed(iviId);
+    updateAppState(iviId, "active");
 }
 
 QString ApplicationFrameworkManager::getAppState(int iviId)
 {
     AppInfo *appInfo = getAppInfo(iviId);
-    return appInfo ? appInfo->state : "unknown";
+    if (!appInfo) {
+        return "unknown";
+    }
+    return appInfo->state;
 }
 
 QList<int> ApplicationFrameworkManager::getRunningApps()
 {
     QList<int> runningApps;
-
-    for (auto it = m_applications.begin(); it != m_applications.end(); ++it) {
-        if (it.value().state != "stopped") {
-            runningApps.append(it.key());
+    for (const auto &appInfo : m_applications) {
+        if (appInfo.state == "running" || appInfo.state == "active") {
+            runningApps.append(appInfo.iviId);
         }
     }
-
     return runningApps;
 }
 
@@ -254,147 +371,146 @@ void ApplicationFrameworkManager::notifyAppConnected(int iviId)
 {
     AppInfo *appInfo = getAppInfo(iviId);
     if (!appInfo) {
+        logWarning(QString("Connected notification for unknown IVI-ID: %1").arg(iviId));
         return;
     }
 
-    logInfo(QString("Application connected: %1 (IVI-ID: %2)").arg(appInfo->name).arg(iviId));
-
-    // Update state from launching to running
-    if (appInfo->state == "launching") {
-        updateAppState(iviId, "running");
-    }
+    logInfo(QString("%1 connected to compositor").arg(appInfo->name));
+    updateAppState(iviId, "active");
 }
 
 void ApplicationFrameworkManager::notifyAppDisconnected(int iviId)
 {
     AppInfo *appInfo = getAppInfo(iviId);
     if (!appInfo) {
+        logWarning(QString("Disconnected notification for unknown IVI-ID: %1").arg(iviId));
         return;
     }
 
-    logInfo(QString("Application disconnected: %1 (IVI-ID: %2)").arg(appInfo->name).arg(iviId));
+    logInfo(QString("%1 disconnected from compositor").arg(appInfo->name));
 
-    // Don't change state - wait for process to actually exit
+    if (appInfo->process && appInfo->process->state() == QProcess::NotRunning) {
+        updateAppState(iviId, "stopped");
+    }
 }
 
 void ApplicationFrameworkManager::startProcess(AppInfo *appInfo)
 {
-    // Clean up old process if exists
-    if (appInfo->process) {
-        delete appInfo->process;
-        appInfo->process = nullptr;
+    if (!appInfo) return;
+
+    if (!appInfo->process) {
+        appInfo->process = new QProcess(this);
+        connect(appInfo->process, &QProcess::started,
+                this, &ApplicationFrameworkManager::onProcessStarted);
+        connect(appInfo->process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, &ApplicationFrameworkManager::onProcessFinished);
+        connect(appInfo->process, &QProcess::errorOccurred,
+                this, &ApplicationFrameworkManager::onProcessError);
+        connect(appInfo->process, &QProcess::stateChanged,
+                this, &ApplicationFrameworkManager::onProcessStateChanged);
     }
 
-    // Create new process
-    appInfo->process = new QProcess(this);
-
-    // Setup environment
+    // Set environment with enhanced checking
     QProcessEnvironment env = createAppEnvironment(appInfo->iviId);
     appInfo->process->setProcessEnvironment(env);
 
-    // Setup logging
-    QString logDir = "./logs";
-    QDir().mkpath(logDir);
-    appInfo->process->setStandardOutputFile(
-        QString("%1/%2.log").arg(logDir, appInfo->name),
-        QIODevice::Append
-        );
-    appInfo->process->setStandardErrorFile(
-        QString("%1/%2.err.log").arg(logDir, appInfo->name),
-        QIODevice::Append
-        );
-
-    // Connect signals
-    connect(appInfo->process, &QProcess::started,
-            this, &ApplicationFrameworkManager::onProcessStarted);
-    connect(appInfo->process,
-            QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, &ApplicationFrameworkManager::onProcessFinished);
-    connect(appInfo->process, &QProcess::errorOccurred,
-            this, &ApplicationFrameworkManager::onProcessError);
-    connect(appInfo->process, &QProcess::stateChanged,
-            this, &ApplicationFrameworkManager::onProcessStateChanged);
-
-    // Launch
+    // Start process
     logInfo(QString("Starting process: %1").arg(appInfo->binaryPath));
-    appInfo->process->start(appInfo->binaryPath);
-
-    if (!appInfo->process->waitForStarted(5000)) {
-        logError(QString("Failed to start %1: %2")
-                     .arg(appInfo->name)
-                     .arg(appInfo->process->errorString()));
-        updateAppState(appInfo->iviId, "stopped");
-        return;
-    }
-
-    // Update process info
-    appInfo->pid = appInfo->process->processId();
     appInfo->runId = m_nextRunId++;
     appInfo->launchTime = QDateTime::currentDateTime();
-
-    logInfo(QString("%1 started successfully - PID: %2, RunID: %3")
-                .arg(appInfo->name)
-                .arg(appInfo->pid)
-                .arg(appInfo->runId));
-
-    // Emit launch signal
-    emit m_dbusAdaptor->AppLaunched(appInfo->iviId, appInfo->runId);
+    appInfo->process->start(appInfo->binaryPath);
 }
 
+void ApplicationFrameworkManager::killProcess(AppInfo *appInfo)
+{
+    if (!appInfo || !appInfo->process) return;
+
+    logInfo(QString("Killing process for %1 (PID: %2)")
+                .arg(appInfo->name).arg(appInfo->pid));
+
+    appInfo->process->terminate();
+    if (!appInfo->process->waitForFinished(3000)) {
+        appInfo->process->kill();
+    }
+}
+
+// ENHANCED: Better environment setup with validation
 QProcessEnvironment ApplicationFrameworkManager::createAppEnvironment(int iviId)
 {
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-
-    // Wayland configuration
-    env.insert("QT_QPA_PLATFORM", "wayland");
-    env.insert("QT_WAYLAND_SHELL_INTEGRATION", "ivi-shell");
-    env.insert("QT_IVI_SURFACE_ID", QString::number(iviId));
-    env.insert("WAYLAND_DISPLAY", "wayland-1");
-
-    // XDG runtime directory
-    QString xdgRuntime = env.value("XDG_RUNTIME_DIR", "/tmp");
-    env.insert("XDG_RUNTIME_DIR", xdgRuntime);
-
-    // Qt optimizations
-    env.insert("QT_QUICK_BACKEND", "software");  // or "openvg" for GPU
-    env.insert("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-
+    
+    // Get XDG_RUNTIME_DIR (critical for both Wayland and EGLFS)
+    QString xdgRuntime = env.value("XDG_RUNTIME_DIR");
+    if (xdgRuntime.isEmpty()) {
+        xdgRuntime = "/run/user/0";
+        env.insert("XDG_RUNTIME_DIR", xdgRuntime);
+        logWarning(QString("XDG_RUNTIME_DIR not set, using: %1").arg(xdgRuntime));
+    }
+    
+    // Check if compositor/Wayland is available
+    QString waylandSocket = QDir(xdgRuntime).filePath("wayland-1");
+    bool compositorRunning = QFile::exists(waylandSocket);
+    
+    if (compositorRunning) {
+        // WAYLAND MODE - Compositor is running
+        logInfo(QString("App %1: Wayland compositor detected, using Wayland mode").arg(iviId));
+        
+        env.insert("QT_QPA_PLATFORM", "wayland");
+        env.insert("QT_WAYLAND_SHELL_INTEGRATION", "ivi-shell");
+        env.insert("QT_IVI_SURFACE_ID", QString::number(iviId));
+        env.insert("WAYLAND_DISPLAY", "wayland-1");
+        env.insert("QT_LOGGING_RULES", "qt.qpa.wayland*=false");
+        
+        logInfo(QString("Wayland socket: %1").arg(waylandSocket));
+    } else {
+        // EGLFS MODE - Standalone mode (no compositor)
+        logInfo(QString("App %1: No compositor detected, using EGLFS standalone mode").arg(iviId));
+        
+        env.insert("QT_QPA_PLATFORM", "eglfs");
+        env.insert("QT_QPA_EGLFS_INTEGRATION", "eglfs_kms");
+        env.insert("QT_QPA_EGLFS_ALWAYS_SET_MODE", "1");
+        
+        logWarning("Running in standalone EGLFS mode - only one app can be active at a time");
+    }
+    
+    // Common settings for both modes
+    env.insert("LC_ALL", "C.UTF-8");
+    
+    logInfo(QString("App %1 environment configured with QT_QPA_PLATFORM=%2")
+            .arg(iviId).arg(env.value("QT_QPA_PLATFORM")));
+    
     return env;
 }
 
 void ApplicationFrameworkManager::onProcessStarted()
 {
-    QProcess *proc = qobject_cast<QProcess*>(sender());
-    if (!proc) return;
+    QProcess *process = qobject_cast<QProcess*>(sender());
+    if (!process) return;
 
-    qint64 pid = proc->processId();
-    logInfo(QString("Process started with PID: %1").arg(pid));
+    for (auto &appInfo : m_applications) {
+        if (appInfo.process == process) {
+            appInfo.pid = process->processId();
+            updateAppState(appInfo.iviId, "running");
+            logInfo(QString("%1 started successfully (PID: %2, RunID: %3)")
+                        .arg(appInfo.name).arg(appInfo.pid).arg(appInfo.runId));
+            break;
+        }
+    }
 }
 
 void ApplicationFrameworkManager::onProcessFinished(int exitCode, QProcess::ExitStatus status)
 {
-    QProcess *proc = qobject_cast<QProcess*>(sender());
-    if (!proc) return;
+    QProcess *process = qobject_cast<QProcess*>(sender());
+    if (!process) return;
 
-    // Find which app this process belongs to
     for (auto &appInfo : m_applications) {
-        if (appInfo.process == proc) {
+        if (appInfo.process == process) {
             QString statusStr = (status == QProcess::NormalExit) ? "normally" : "crashed";
-            logInfo(QString("%1 exited %2 with code %3")
-                        .arg(appInfo.name)
-                        .arg(statusStr)
-                        .arg(exitCode));
+            logInfo(QString("%1 finished %2 (exit code: %3)")
+                        .arg(appInfo.name).arg(statusStr).arg(exitCode));
 
-            // Update state
             updateAppState(appInfo.iviId, "stopped");
-
-            // Emit termination signal
-            emit m_dbusAdaptor->AppTerminated(appInfo.iviId);
-
-            // Reset process info
             appInfo.pid = 0;
-            appInfo.runId = 0;
-
             break;
         }
     }
@@ -402,65 +518,58 @@ void ApplicationFrameworkManager::onProcessFinished(int exitCode, QProcess::Exit
 
 void ApplicationFrameworkManager::onProcessError(QProcess::ProcessError error)
 {
-    QProcess *proc = qobject_cast<QProcess*>(sender());
-    if (!proc) return;
+    QProcess *process = qobject_cast<QProcess*>(sender());
+    if (!process) return;
 
-    QString errorStr;
-    switch (error) {
-    case QProcess::FailedToStart:
-        errorStr = "Failed to start";
-        break;
-    case QProcess::Crashed:
-        errorStr = "Crashed";
-        break;
-    case QProcess::Timedout:
-        errorStr = "Timed out";
-        break;
-    case QProcess::WriteError:
-        errorStr = "Write error";
-        break;
-    case QProcess::ReadError:
-        errorStr = "Read error";
-        break;
-    default:
-        errorStr = "Unknown error";
+    for (auto &appInfo : m_applications) {
+        if (appInfo.process == process) {
+            logError(QString("%1 process error: %2")
+                         .arg(appInfo.name).arg(process->errorString()));
+
+            // Additional diagnostics
+            if (error == QProcess::FailedToStart) {
+                logError("  Reason: Failed to start");
+                logError(QString("  Binary: %1").arg(appInfo.binaryPath));
+                logError("  Check: Binary exists and is executable");
+            } else if (error == QProcess::Crashed) {
+                logError("  Reason: Process crashed");
+                logError("  Check application logs for crash details");
+            }
+
+            updateAppState(appInfo.iviId, "error");
+            break;
+        }
     }
-
-    logError(QString("Process error: %1 - %2").arg(errorStr).arg(proc->errorString()));
 }
 
 void ApplicationFrameworkManager::onProcessStateChanged(QProcess::ProcessState newState)
 {
-    QProcess *proc = qobject_cast<QProcess*>(sender());
-    if (!proc) return;
+    QProcess *process = qobject_cast<QProcess*>(sender());
+    if (!process) return;
 
     QString stateStr;
     switch (newState) {
-    case QProcess::NotRunning:
-        stateStr = "Not Running";
-        break;
-    case QProcess::Starting:
-        stateStr = "Starting";
-        break;
-    case QProcess::Running:
-        stateStr = "Running";
-        break;
+    case QProcess::NotRunning: stateStr = "NotRunning"; break;
+    case QProcess::Starting: stateStr = "Starting"; break;
+    case QProcess::Running: stateStr = "Running"; break;
     }
 
-    qDebug() << "[AFM] Process state changed to:" << stateStr;
+    for (const auto &appInfo : m_applications) {
+        if (appInfo.process == process) {
+            logInfo(QString("%1 process state: %2").arg(appInfo.name).arg(stateStr));
+            break;
+        }
+    }
 }
 
 void ApplicationFrameworkManager::onWatchdogTimeout()
 {
-    // Check for zombie processes or hung applications
     for (auto &appInfo : m_applications) {
-        if (appInfo.process && appInfo.state != "stopped") {
-            QProcess::ProcessState procState = appInfo.process->state();
-
-            if (procState == QProcess::NotRunning && appInfo.state != "stopped") {
-                logWarning(QString("Watchdog: %1 process not running but state is %2")
-                               .arg(appInfo.name).arg(appInfo.state));
-                updateAppState(appInfo.iviId, "stopped");
+        if (appInfo.process && appInfo.state == "running") {
+            if (appInfo.process->state() == QProcess::NotRunning) {
+                logWarning(QString("%1 process died unexpectedly").arg(appInfo.name));
+                updateAppState(appInfo.iviId, "crashed");
+                appInfo.pid = 0;
             }
         }
     }
@@ -468,14 +577,16 @@ void ApplicationFrameworkManager::onWatchdogTimeout()
 
 AppInfo* ApplicationFrameworkManager::getAppInfo(int iviId)
 {
-    auto it = m_applications.find(iviId);
-    return (it != m_applications.end()) ? &it.value() : nullptr;
+    if (m_applications.contains(iviId)) {
+        return &m_applications[iviId];
+    }
+    return nullptr;
 }
 
 QString ApplicationFrameworkManager::getAppRole(int iviId)
 {
-    AppInfo *info = getAppInfo(iviId);
-    return info ? info->role : QString();
+    AppInfo *appInfo = getAppInfo(iviId);
+    return appInfo ? appInfo->role : QString();
 }
 
 void ApplicationFrameworkManager::updateAppState(int iviId, const QString &newState)
@@ -486,23 +597,22 @@ void ApplicationFrameworkManager::updateAppState(int iviId, const QString &newSt
     if (appInfo->state != newState) {
         QString oldState = appInfo->state;
         appInfo->state = newState;
+        logInfo(QString("%1 state: %2 -> %3")
+                    .arg(appInfo->name).arg(oldState).arg(newState));
 
-        logInfo(QString("%1 state: %2 → %3").arg(appInfo->name).arg(oldState).arg(newState));
-
-        // Emit state change signal
-        emit m_dbusAdaptor->StateChanged(iviId, newState);
+        if (m_dbusAdaptor) {
+            emit m_dbusAdaptor->StateChanged(iviId, newState);
+        }
     }
 }
 
 void ApplicationFrameworkManager::logInfo(const QString &message)
 {
-    QString logMessage = QString("[%1] [INFO] %2")
-    .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
-        .arg(message);
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    QString logMessage = QString("[%1] [INFO] %2").arg(timestamp).arg(message);
 
     qInfo().noquote() << logMessage;
 
-    // Write to log file
     QFile logFile(m_logFilePath);
     if (logFile.open(QIODevice::Append | QIODevice::Text)) {
         QTextStream out(&logFile);
@@ -513,9 +623,8 @@ void ApplicationFrameworkManager::logInfo(const QString &message)
 
 void ApplicationFrameworkManager::logWarning(const QString &message)
 {
-    QString logMessage = QString("[%1] [WARN] %2")
-    .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
-        .arg(message);
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    QString logMessage = QString("[%1] [WARN] %2").arg(timestamp).arg(message);
 
     qWarning().noquote() << logMessage;
 
@@ -529,9 +638,8 @@ void ApplicationFrameworkManager::logWarning(const QString &message)
 
 void ApplicationFrameworkManager::logError(const QString &message)
 {
-    QString logMessage = QString("[%1] [ERROR] %2")
-    .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss"))
-        .arg(message);
+    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+    QString logMessage = QString("[%1] [ERROR] %2").arg(timestamp).arg(message);
 
     qCritical().noquote() << logMessage;
 
@@ -589,14 +697,27 @@ void ApplicationLifecycleDBus::ResumeApp(int iviId)
     }
 }
 
+void ApplicationLifecycleDBus::LaunchInitialApps()
+{
+    if (m_manager) {
+        m_manager->launchInitialApplications();
+    }
+}
+
 QString ApplicationLifecycleDBus::GetAppState(int iviId)
 {
-    return m_manager ? m_manager->getAppState(iviId) : "unknown";
+    if (m_manager) {
+        return m_manager->getAppState(iviId);
+    }
+    return "unknown";
 }
 
 QList<int> ApplicationLifecycleDBus::GetRunningApps()
 {
-    return m_manager ? m_manager->getRunningApps() : QList<int>();
+    if (m_manager) {
+        return m_manager->getRunningApps();
+    }
+    return QList<int>();
 }
 
 void ApplicationLifecycleDBus::AppConnected(int iviId)

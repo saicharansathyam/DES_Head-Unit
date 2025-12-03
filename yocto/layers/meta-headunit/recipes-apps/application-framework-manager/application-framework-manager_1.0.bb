@@ -26,7 +26,13 @@ EXTRA_OECMAKE += " \
     -DCMAKE_BUILD_TYPE=Release \
 "
 
-do_install:append() {
+do_install() {
+    # Install the AFM binary (CMake should handle this, but be explicit)
+    install -d ${D}${bindir}
+    if [ -f ${B}/headunit-afm ]; then
+        install -m 0755 ${B}/headunit-afm ${D}${bindir}/
+    fi
+    
     # Install systemd service
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${WORKDIR}/afm.service ${D}${systemd_system_unitdir}/

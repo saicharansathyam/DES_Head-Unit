@@ -52,7 +52,7 @@ export QT_QPA_EGLFS_PHYSICAL_WIDTH=154
 export QT_QPA_EGLFS_PHYSICAL_HEIGHT=85
 export QT_QPA_EGLFS_FORCE_888=1
 export QT_QPA_EGLFS_SWAPINTERVAL=1
-export QT_QUICK_BACKEND=software
+#export QT_QUICK_BACKEND=software
 export LC_ALL=C.UTF-8
 
 log "Environment configured"
@@ -83,15 +83,22 @@ fi
 export WAYLAND_DISPLAY=wayland-1
 export QT_QPA_PLATFORM=wayland
 export QT_WAYLAND_SHELL_INTEGRATION=ivi-shell
+export QT_QUICK_BACKEND=software
 
-# Wait a bit more for compositor to be fully ready
-sleep 2
+# Wait for compositor to be fully ready
+sleep 3
 
-# Start Application Framework Manager if not running
-if ! systemctl is-active --quiet application-framework-manager; then
-    log "Starting Application Framework Manager..."
-    systemctl start application-framework-manager
-    sleep 2
+# Trigger AFM to launch initial applications
+log "Triggering AFM to launch initial applications..."
+if systemctl is-active --quiet afm; then
+    # Use D-Bus to tell AFM to launch apps
+    dbus-send --session --print-reply \
+        --dest=com.headunit.AppLifecycle \
+        /com/headunit/AppLifecycle \
+        com.headunit.AppLifecycle.LaunchInitialApps || log "AFM launch trigger failed"
+    log "AFM launch request sent"
+else
+    log "WARNING: AFM service not running!"
 fi
 
 log "======================================"

@@ -14,7 +14,7 @@ DEPENDS = " \
     wayland-native \
 "
 
-# Source files - Include ALL necessary files
+# Source files - Include ALL QML files
 SRC_URI = " \
     file://main.cpp \
     file://dbus_manager.h \
@@ -26,6 +26,8 @@ SRC_URI = " \
     file://qml/AppSwitcher.qml \
     file://qml/LeftPanel.qml \
     file://qml/RightPanel.qml \
+    file://qml/HomeView.qml \
+    file://qml/MapTile.qml \
     file://compositor.service \
     file://ivi-compositor-tmpfiles.conf \
 "
@@ -46,13 +48,13 @@ EXTRA_OECMAKE += " \
 do_install() {
     # Install binary
     install -d ${D}${bindir}
-    install -m 0755 ${B}/headUnit ${D}${bindir}/ivi-compositor
+    install -m 0755 ${B}/ivi-compositor ${D}${bindir}/ivi-compositor
     
     # Install systemd service
     install -d ${D}${systemd_system_unitdir}
     install -m 0644 ${WORKDIR}/compositor.service ${D}${systemd_system_unitdir}/
     
-    # Install tmpfiles configuration for log directory
+    # Install tmpfiles configuration
     install -d ${D}${sysconfdir}/tmpfiles.d
     install -m 0644 ${WORKDIR}/ivi-compositor-tmpfiles.conf ${D}${sysconfdir}/tmpfiles.d/
     
@@ -74,7 +76,6 @@ FILES:${PN} = " \
     ${datadir}/headunit/apps/compositor.desktop \
 "
 
-
 # Runtime dependencies
 RDEPENDS:${PN} += " \
     qtbase \
@@ -85,9 +86,6 @@ RDEPENDS:${PN} += " \
     mesa \
     libdrm \
 "
-
-# Ensure compositor starts before applications
-SYSTEMD_SERVICE:${PN} = "compositor.service"
 
 # Security and permissions
 USERADD_PACKAGES = "${PN}"

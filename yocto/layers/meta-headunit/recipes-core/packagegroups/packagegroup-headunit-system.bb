@@ -18,4 +18,6 @@ RDEPENDS:${PN} = " \
     net-tools \
     iproute2 \
     tzdata \
+    sudo \
+    nano \
 "

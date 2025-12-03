@@ -1,0 +1,15 @@
+[Unit]
+Description=D-Bus Session Bus
+Before=afm.service compositor.service mock-dbus.service mock-theme.service mock-mediaplayer.service mock-settings.service
+
+[Service]
+Type=simple
+ExecStartPre=/bin/mkdir -p /run/user/0
+ExecStartPre=/bin/chmod 700 /run/user/0
+ExecStart=/usr/bin/dbus-daemon --session --address=unix:path=/run/user/0/bus --nofork --nopidfile
+Environment="XDG_RUNTIME_DIR=/run/user/0"
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

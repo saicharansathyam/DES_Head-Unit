@@ -43,9 +43,9 @@ void MP_Handler::setupDBusConnection()
     }
 
     m_serviceInterface = new QDBusInterface(
-        "com.headunit.MediaPlayerService",
-        "/com/headunit/MediaPlayer",
-        "com.headunit.MediaPlayer",
+        "com.seame.MediaPlayer",
+        "/com/seame/MediaPlayer",
+        "com.seame.MediaPlayer",
         sessionBus,
         this
         );
@@ -57,27 +57,27 @@ void MP_Handler::setupDBusConnection()
 
         // Connect to playback signals
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "PlaybackStateChanged",
             this,
             SLOT(handleServicePlaybackStateChanged(QString))
             );
 
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "PositionChanged",
             this,
             SLOT(handleServicePositionChanged(qint64))
             );
 
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "DurationChanged",
             this,
             SLOT(handleServiceDurationChanged(qint64))
@@ -85,45 +85,45 @@ void MP_Handler::setupDBusConnection()
 
         // Connect to USB signals
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "UsbDevicesChanged",
             this,
             SLOT(handleUsbDevicesChanged(QStringList))
             );
 
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "MediaFilesChanged",
             this,
             SLOT(handleMediaFilesChanged(QStringList))
             );
 
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "CurrentDeviceChanged",
             this,
             SLOT(handleCurrentDeviceChanged(QString))
             );
 
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "UsbDeviceInserted",
             this,
             SLOT(handleUsbInserted(QString))
             );
 
         sessionBus.connect(
-            "com.headunit.MediaPlayerService",
-            "/com/headunit/MediaPlayer",
-            "com.headunit.MediaPlayer",
+            "com.seame.MediaPlayer",
+            "/com/seame/MediaPlayer",
+            "com.seame.MediaPlayer",
             "UsbDeviceRemoved",
             this,
             SLOT(handleUsbRemoved(QString))

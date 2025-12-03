@@ -13,7 +13,7 @@ S = "${WORKDIR}"
 inherit systemd
 
 SYSTEMD_SERVICE:${PN} = "headunit-startup.service"
-SYSTEMD_AUTO_ENABLE = "enable"
+SYSTEMD_AUTO_ENABLE = "disable"
 
 do_install() {
     # Install startup script

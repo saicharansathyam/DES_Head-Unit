@@ -1,25 +1,87 @@
-require recipes-core/images/core-image-base.bb
+SUMMARY = "HeadUnit IVI System Image"
+DESCRIPTION = "Custom Linux image for automotive IVI system with Qt6 and Wayland"
 
-SUMMARY = "HeadUnit Custom Linux Image"
-DESCRIPTION = "Modular IVI system with optimized dependencies"
+IMAGE_FEATURES += "splash"
+
 LICENSE = "MIT"
 
+inherit core-image
+
+# CRITICAL FIX: Remove glib-networking to prevent GIO module cache intercept
+# This package triggers the update_gio_module_cache hook that fails in Docker
+PACKAGE_EXCLUDE += "glib-networking"
+
 IMAGE_INSTALL:append = " \
-    packagegroup-headunit-core \
-    packagegroup-headunit-fonts \
-    packagegroup-headunit-input \
-    packagegroup-headunit-graphics \
+    packagegroup-core-boot \
+    qtbase \
+    qtdeclarative \
+    qtwayland \
+    qtwayland-plugins \
+    qtvirtualkeyboard \
+    qtbase-plugins \
+    wayland \
+    application-framework-manager \
+    weston \
+    weston-init \
+    weston-examples \
+    ivi-compositor \
+    mock-dbus \
+    gearselector \
+    mediaplayer \
+    themecolor \
+    instrument-cluster \
     headunit-startup \
+    python3 \
+    python3-dbus \
+    python3-pygobject \
+    systemd \
+    dbus \
+    bluez5 \
+    pulseaudio \
+    alsa-utils \
+    kernel-modules \
+    sudo \
+    nano \
+    linux-firmware \
+    connman \
+    connman-client \
+    connman-provision \
+    openssh \
+    openssh-sshd \
+    openssh-scp \
+    openssh-ssh \
+    fontconfig \
+    systemd-autologin \
+    systemd-tmpfiles \
+    packagegroup-headunit-fonts \
+    packagegroup-headunit-qt6 \
+    udev-extraconf \
+    dbus-session \
+    boot-animation \
+    gstreamer1.0 \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly \
+    gstreamer1.0-libav \
 "
 
-# Development features
-IMAGE_FEATURES += "ssh-server-openssh"
-EXTRA_IMAGE_FEATURES += "debug-tweaks tools-debug"
+IMAGE_LINGUAS = "en-us"
 
-# Qt optimizations
-PACKAGECONFIG:append:pn-qtbase = " fontconfig dbus accessibility"
-PACKAGECONFIG:append:pn-qtmultimedia = " gstreamer"
+DISTRO_FEATURES:append = " systemd wayland wifi bluetooth alsa pulseaudio touchscreen dbus opengl ivi-shell"
+DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
+VIRTUAL-RUNTIME_init_manager = "systemd"
+VIRTUAL-RUNTIME_initscripts = ""
 
-# Image size optimization
-IMAGE_FSTYPES = "tar.bz2 ext4 wic.bz2"
-IMAGE_ROOTFS_EXTRA_SPACE = "524288"
+PACKAGECONFIG:append:pn-qtbase = " eglfs gbm kms fontconfig dbus"
+PACKAGECONFIG:append:pn-systemd = " networkd resolved"
+
+IMAGE_ROOTFS_EXTRA_SPACE = "2048"
+
+# Set default systemd target to graphical (ensures compositor starts)
+SYSTEMD_DEFAULT_TARGET = "graphical.target"
+
+# Disable getty on tty1 to prevent terminal flash during boot
+SYSTEMD_MASK:${PN} = "getty@tty1.service"
+
+

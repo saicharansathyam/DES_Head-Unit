@@ -14,7 +14,7 @@ add_executable(GearSelector
     gs_handler.h
 )
 
-# Add BOTH QML files to resources
+# Add ONLY Main.qml to resources
 qt_add_resources(GearSelector "qml"
     PREFIX "/"
     FILES

@@ -33,9 +33,9 @@ void GS_Handler::setupDBusConnection()
 
     // Connect to PiRacer dashboard service
     m_piracerInterface = new QDBusInterface(
-        "com.piracer.dashboard",           // Service name from your Python service
-        "/com/piracer/dashboard",          // Path
-        "com.piracer.dashboard",           // Interface
+        "com.seame.Dashboard",           // Service name from your Python service
+        "/com/seame/Dashboard",          // Path
+        "com.seame.Dashboard",           // Interface
         sessionBus,
         this
     );
@@ -54,9 +54,9 @@ void GS_Handler::setupDBusConnection()
 
     // Connect to gear change signals from PiRacer
     bool connected = sessionBus.connect(
-        "com.piracer.dashboard",
-        "/com/piracer/dashboard",
-        "com.piracer.dashboard",
+        "com.seame.Dashboard",
+        "/com/seame/Dashboard",
+        "com.seame.Dashboard",
         "GearChanged",
         this,
         SLOT(handlePiRacerGearChange(QString))
@@ -70,9 +70,9 @@ void GS_Handler::setupDBusConnection()
     
     // Connect to speed changes to display in UI
     connected = sessionBus.connect(
-        "com.piracer.dashboard",
-        "/com/piracer/dashboard",
-        "com.piracer.dashboard",
+        "com.seame.Dashboard",
+        "/com/seame/Dashboard",
+        "com.seame.Dashboard",
         "SpeedChanged",
         this,
         SLOT(handleSpeedChange(double))
@@ -84,9 +84,9 @@ void GS_Handler::setupDBusConnection()
     
     // Connect to battery changes
     connected = sessionBus.connect(
-        "com.piracer.dashboard",
-        "/com/piracer/dashboard",
-        "com.piracer.dashboard",
+        "com.seame.Dashboard",
+        "/com/seame/Dashboard",
+        "com.seame.Dashboard",
         "BatteryChanged",
         this,
         SLOT(handleBatteryChange(double))
@@ -153,7 +153,7 @@ void GS_Handler::handleServiceOwnerChanged(const QString &serviceName,
                                            const QString &oldOwner, 
                                            const QString &newOwner)
 {
-    if (serviceName == "com.piracer.dashboard") {
+    if (serviceName == "com.seame.Dashboard") {
         if (newOwner.isEmpty()) {
             // Service disappeared
             qWarning() << "PiRacer dashboard service disconnected";
@@ -167,9 +167,9 @@ void GS_Handler::handleServiceOwnerChanged(const QString &serviceName,
             // Recreate interface
             delete m_piracerInterface;
             m_piracerInterface = new QDBusInterface(
-                "com.piracer.dashboard",
-                "/com/piracer/dashboard",
-                "com.piracer.dashboard",
+                "com.seame.Dashboard",
+                "/com/seame/Dashboard",
+                "com.seame.Dashboard",
                 QDBusConnection::sessionBus(),
                 this
             );

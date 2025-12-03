@@ -1,24 +1,21 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-//#include <QtWebView/QtWebView>
 #include <QQuickStyle>
 #include <QDebug>
 #include "mp_handler.h"
 
 int main(int argc, char *argv[])
 {
-    // IMPORTANT: Enable virtual keyboard BEFORE creating QGuiApplication
+    // Trust systemd service environment:
+    // - QT_QPA_PLATFORM=wayland      (set by service)
+    // - WAYLAND_DISPLAY=wayland-2     (set by service)
+    // - IVI_SURFACE_ID=1002           (set by service)
+    //
+    // DO NOT override these - they must come from systemd!
+    
+    // Enable virtual keyboard BEFORE creating QGuiApplication
     qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
-
-    // Initialize QtWebView
-    // QtWebView::initialize(); // Disabled - WebView not available
-
-    // Set Wayland environment
-    qputenv("QT_QPA_PLATFORM", "wayland");
-    if (qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY")) {
-        qputenv("WAYLAND_DISPLAY", "wayland-1");
-    }
 
     QQuickStyle::setStyle("Fusion");
     QGuiApplication app(argc, argv);
@@ -49,6 +46,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    qDebug() << "MediaPlayer with Virtual Keyboard started successfully";
+    qDebug() << "MediaPlayer started successfully";
     return app.exec();
 }

@@ -1,0 +1,9 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>Main.qml</file>
+        <file>ColorWheel.qml</file>
+        <file>PreviewButton.qml</file>
+        <file>ColorUtils.js</file>
+    </qresource>
+</RCC>

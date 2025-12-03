@@ -1,4 +1,3 @@
-// Main.qml
 import QtQuick
 import QtQuick.Window
 import QtWayland.Compositor
@@ -6,22 +5,23 @@ import QtWayland.Compositor.IviApplication
 
 WaylandCompositor {
     id: waylandCompositor
-    socketName: "wayland-1"
 
-    // IVI Application extension
+    // NESTED COMPOSITOR: We provide wayland-2 socket for our apps
+    // while we ourselves connect to Weston on wayland-0
+    socketName: "wayland-2"
+
+    // IVI Application extension for our nested clients
     IviApplication {
         id: iviApplication
 
         onIviSurfaceCreated: function(iviSurface) {
-            console.log("IVI Surface created with ID:", iviSurface.iviId)
+            console.log("Nested Compositor: IVI Surface created with ID:", iviSurface.iviId)
             surfaceManager.handleNewSurface(iviSurface)
-
-            // Notify AFM via native D-Bus (not shell script)
-            dbusManager.notifyAppConnected(iviSurface.iviId)
+            notifyAppConnected(iviSurface.iviId)
         }
     }
 
-    // Surface manager
+    // Surface manager (manages nested app surfaces)
     SurfaceManager {
         id: surfaceManager
         compositor: waylandCompositor
@@ -36,36 +36,11 @@ WaylandCompositor {
 
         onSurfaceDestroyed: function(iviId) {
             console.log("Surface destroyed:", iviId)
-            dbusManager.notifyAppDisconnected(iviId)
+            notifyAppDisconnected(iviId)
         }
     }
 
-    // Connect to AFM signals
-    Connections {
-        target: dbusManager
-
-        function onAppLaunched(iviId, runId) {
-            console.log("[Compositor] AFM launched app:", iviId, "RunID:", runId)
-            // Surface will arrive via IVI protocol
-        }
-
-        function onAppTerminated(iviId) {
-            console.log("[Compositor] AFM terminated app:", iviId)
-            // Surface destruction handled by surfaceManager
-        }
-
-        function onAppStateChanged(iviId, state) {
-            console.log("[Compositor] App state changed:", iviId, "->", state)
-
-            // If app became "active", bring to foreground
-            if (state === "active" && surfaceManager.isAppRunning(iviId)) {
-                console.log("[Compositor] Activating app surface:", iviId)
-                surfaceManager.switchToApplication(iviId)
-            }
-        }
-    }
-
-    // Wayland Output
+    // Our compositor's output (rendered as a Wayland window to Weston)
     WaylandOutput {
         id: output
         compositor: waylandCompositor
@@ -73,14 +48,18 @@ WaylandCompositor {
 
         window: Window {
             id: mainWindow
+
             property alias leftPanel: leftPanelItem
             property alias rightPanel: rightPanelItem
 
             width: 1024
             height: 600
             visible: true
-            title: "HeadUnit IVI Compositor"
-            flags: Qt.FramelessWindowHint
+            title: "HeadUnit IVI Nested Compositor"
+            
+            // Run as Wayland client (no FramelessWindowHint for Weston)
+            // Weston will position us via IVI-Shell
+            color: "#1a1a1a"
 
             Rectangle {
                 id: background
@@ -96,7 +75,7 @@ WaylandCompositor {
                     width: 200
                 }
 
-                // Right panel - Switchable apps
+                // Right panel - HomeView / Apps + AppSwitcher
                 RightPanel {
                     id: rightPanelItem
                     anchors.right: parent.right
@@ -112,6 +91,12 @@ WaylandCompositor {
                         var appName = getAppName(appId)
                         console.log("App Name:", appName)
 
+                        if (appId === 0) {
+                            console.log("Returning to Home")
+                            surfaceManager.switchToApplication(0)
+                            return
+                        }
+
                         if (surfaceManager.currentRightApp === appId) {
                             console.log("Already displaying", appName)
                             return
@@ -121,14 +106,12 @@ WaylandCompositor {
                         console.log("Is app running?", isRunning)
 
                         if (isRunning) {
-                            console.log("App is running - activating via AFM")
-                            // Request activation through AFM for proper window management
-                            dbusManager.activateApp(appId)
-                            // AFM will signal back with appStateChanged("active")
-                            // which will trigger surfaceManager.switchToApplication
+                            console.log("App is running - switching to surface")
+                            surfaceManager.switchToApplication(appId)
                         } else {
-                            console.log("App not running - requesting launch via AFM")
-                            dbusManager.launchApp(appId)
+                            console.log("App not running - requesting launch with auto-switch")
+                            surfaceManager.setPendingLaunch(appId)
+                            requestAppLaunch(appId)
                             console.log("Launch requested for", appName)
                         }
 
@@ -142,26 +125,25 @@ WaylandCompositor {
                     anchors.right: parent.right
                     anchors.margins: 5
                     width: 200
-                    height: 100
+                    height: 95
                     color: "#80000000"
                     radius: 5
-                    visible: dbusManager.afmConnected
 
                     Column {
                         anchors.centerIn: parent
                         spacing: 3
 
                         Text {
-                            text: "HeadUnit"
-                            color: dbusManager.afmConnected ? "#00ff00" : "#ff0000"
-                            font.pixelSize: 12
+                            text: "Nested Compositor"
+                            color: "#00ff00"
+                            font.pixelSize: 11
                             font.bold: true
                         }
 
                         Text {
-                            text: "AFM: " + (dbusManager.afmConnected ? "Connected" : "Disconnected")
+                            text: "Socket: wayland-2"
                             color: "white"
-                            font.pixelSize: 9
+                            font.pixelSize: 8
                         }
 
                         Text {
@@ -183,10 +165,25 @@ WaylandCompositor {
 
     defaultOutput: output
 
-    // Helper functions
+    // D-Bus communication functions
+    function notifyAppConnected(iviId) {
+        console.log("Notifying app connected:", iviId)
+        dbusManager.notifyAppConnected(iviId)
+    }
+
+    function notifyAppDisconnected(iviId) {
+        console.log("Notifying app disconnected:", iviId)
+        dbusManager.notifyAppDisconnected(iviId)
+    }
+
+    function requestAppLaunch(iviId) {
+        console.log("Requesting app launch:", iviId)
+        dbusManager.launchApp(iviId)
+    }
+
     function getAppName(iviId) {
         var names = {
-            1000: "HomePage",
+            0: "Home",
             1001: "GearSelector",
             1002: "MediaPlayer",
             1003: "ThemeColor",
@@ -197,12 +194,17 @@ WaylandCompositor {
     }
 
     Component.onCompleted: {
-        console.log("=== HeadUnit Compositor Ready ===")
-        console.log("Socket: wayland-1")
+        console.log("=== HeadUnit Nested Compositor Ready ===")
+        console.log("Our IVI Surface ID: 1001 (to Weston)")
+        console.log("Our Wayland Socket: wayland-2 (for apps)")
+        console.log("Target Display: HDMI-A-1 via Weston")
         console.log("Resolution: 1024x600")
-        console.log("Left panel: 200px (Clock + Temp + Gear)")
+        console.log("Left panel: 200px")
         console.log("Right panel: 824px")
-        console.log("AFM Connected:", dbusManager.afmConnected)
-        console.log("=================================")
+        console.log("========================================")
+
+        // Launch GearSelector on startup
+        console.log("Launching GearSelector")
+        requestAppLaunch(1001)
     }
 }

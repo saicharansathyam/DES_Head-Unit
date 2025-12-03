@@ -1,0 +1,38 @@
+[Unit]
+Description=Instrument Cluster Display (Standalone Weston on HDMI-A-2)
+After=weston.service dbus.service mock-dbus.service
+Requires=weston.service dbus.service
+Wants=mock-dbus.service
+
+[Service]
+Type=simple
+User=root
+
+# CRITICAL: Use system bus instead of session bus
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket"
+
+# Wayland configuration - connect to main Weston (wayland-0)
+Environment="XDG_RUNTIME_DIR=/run"
+Environment="WAYLAND_DISPLAY=wayland-0"
+
+# Qt Wayland configuration
+Environment="QT_QPA_PLATFORM=wayland"
+Environment="QT_WAYLAND_DISABLE_WINDOWDECORATION=1"
+Environment="QT_QUICK_BACKEND=software"
+
+# IVI Surface ID for instrument cluster
+Environment="IVI_SURFACE_ID=2001"
+
+# Logging
+Environment="QT_LOGGING_RULES=*.debug=false;qt.qpa.*=true"
+
+ExecStartPre=/bin/sleep 3
+ExecStart=/usr/bin/instrument-cluster
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

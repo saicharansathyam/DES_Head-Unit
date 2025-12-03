@@ -1,0 +1,28 @@
+[Unit]
+Description=GearSelector App (Nested Wayland Client)
+After=compositor.service dbus-session.service
+Requires=compositor.service dbus-session.service
+
+[Service]
+Type=simple
+User=root
+
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
+Environment="XDG_RUNTIME_DIR=/run/user/0"
+Environment="WAYLAND_DISPLAY=wayland-2"
+Environment="QT_QPA_PLATFORM=wayland"
+Environment="QT_WAYLAND_DISABLE_WINDOWDECORATION=1"
+Environment="IVI_SURFACE_ID=1001"
+Environment="QT_LOGGING_RULES=*.debug=false"
+
+ExecStartPre=/bin/sleep 4
+
+ExecStart=/usr/bin/gearselector
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

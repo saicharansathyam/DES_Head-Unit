@@ -5,36 +5,28 @@
 
 int main(int argc, char *argv[])
 {
-    // Don't set QT_QPA_PLATFORM here - it should come from environment
-    // when launched by the lifecycle manager
-
+    // Trust systemd service environment:
+    // - QT_QPA_PLATFORM=wayland      (set by service)
+    // - WAYLAND_DISPLAY=wayland-2     (set by service)
+    // - IVI_SURFACE_ID=1001           (set by service)
+    
     QGuiApplication app(argc, argv);
-
     app.setOrganizationName("HeadUnit");
     app.setApplicationName("GearSelector");
 
-    // Register GearHandler type
-    qmlRegisterType<GS_Handler>("GearSelector", 1, 0, "GearHandler");
+    GS_Handler handler;
 
     QQmlApplicationEngine engine;
-
+    engine.rootContext()->setContextProperty("gearHandler", &handler);
+    
     const QUrl url(QStringLiteral("qrc:/Main.qml"));
-
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
-                         if (!obj && url == objUrl) {
-                             QCoreApplication::exit(-1);
-                         }
-                     }, Qt::QueuedConnection);
-
+        if (!obj && url == objUrl)
+            QCoreApplication::exit(-1);
+    }, Qt::QueuedConnection);
+    
     engine.load(url);
-
-    if (engine.rootObjects().isEmpty()) {
-        return -1;
-    }
-
-    qDebug() << "GearSelector application started";
-    qDebug() << "Platform:" << QGuiApplication::platformName();
 
     return app.exec();
 }

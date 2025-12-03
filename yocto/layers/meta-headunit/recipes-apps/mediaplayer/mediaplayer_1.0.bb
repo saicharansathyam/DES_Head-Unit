@@ -33,28 +33,43 @@ SRC_URI = " \
     file://icons/skip-forward.svg \
     file://icons/volume.svg \
     file://mediaplayer.desktop \
+    file://mediaplayer.service \
 "
 
 S = "${WORKDIR}"
 
-inherit qt6-cmake
+inherit qt6-cmake systemd
+
+SYSTEMD_SERVICE:${PN} = "mediaplayer.service"
+SYSTEMD_AUTO_ENABLE = "enable"
 
 EXTRA_OECMAKE += " \
     -DCMAKE_BUILD_TYPE=Release \
-    -DQT_QPA_PLATFORM=wayland \
 "
 
 do_install() {
+    # Install binary
     install -d ${D}${bindir}
-    install -m 0755 ${B}/MediaPlayer ${D}${bindir}/
+    install -m 0755 ${B}/MediaPlayer ${D}${bindir}/mediaplayer
+    
+    # Install systemd service
+    install -d ${D}${systemd_system_unitdir}
+    install -m 0644 ${WORKDIR}/mediaplayer.service ${D}${systemd_system_unitdir}/
     
     # Install app metadata
     install -d ${D}${datadir}/headunit/apps
     install -m 0644 ${WORKDIR}/mediaplayer.desktop ${D}${datadir}/headunit/apps/
 }
 
+# AFM compatibility: Create capitalized symlink
+do_install:append() {
+    ln -sf mediaplayer ${D}${bindir}/MediaPlayer
+}
+
 FILES:${PN} = " \
+    ${bindir}/mediaplayer \
     ${bindir}/MediaPlayer \
+    ${systemd_system_unitdir}/mediaplayer.service \
     ${datadir}/headunit/apps/mediaplayer.desktop \
 "
 

@@ -1,0 +1,35 @@
+[Unit]
+Description=Boot Animation - LEXUS Logo (Dual Display)
+Before=weston.service compositor.service getty@tty1.service
+After=multi-user.target
+DefaultDependencies=no
+
+[Service]
+Type=forking
+# Launch video on BOTH framebuffers simultaneously
+ExecStart=/bin/sh -c ' \
+    /usr/bin/gst-launch-1.0 -q \
+        filesrc location=/usr/share/boot-animation/lexus-logo.mp4 ! \
+        decodebin ! videoconvert ! videoscale ! \
+        video/x-raw,width=1024,height=600 ! \
+        tee name=t \
+        t. ! queue ! fbdevsink device=/dev/fb0 sync=false \
+        t. ! queue ! fbdevsink device=/dev/fb1 sync=false \
+    & \
+    echo $! > /run/boot-animation.pid \
+'
+
+# Kill the animation when done (will be replaced by Weston)
+ExecStop=/bin/sh -c 'kill $(cat /run/boot-animation.pid 2>/dev/null) 2>/dev/null || true'
+
+# Stop animation before Weston starts
+ExecStopPost=/bin/sh -c 'rm -f /run/boot-animation.pid'
+
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=15
+TimeoutStopSec=5
+
+[Install]
+WantedBy=graphical.target

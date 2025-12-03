@@ -1,0 +1,29 @@
+[Unit]
+Description=Mock Settings D-Bus Service
+Documentation=man:mock-settings(1)
+After=dbus.service
+Requires=dbus.service
+Before=application-framework-manager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mock-settings-service
+Restart=always
+RestartSec=3
+
+# Environment
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
+Environment="XDG_RUNTIME_DIR=/run/user/0"
+Environment="QT_QUICK_BACKEND=software"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mock-settings
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

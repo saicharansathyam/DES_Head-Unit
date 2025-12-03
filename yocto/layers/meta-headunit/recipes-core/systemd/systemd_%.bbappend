@@ -1,10 +1,17 @@
-FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
-
-SRC_URI += "file://wlan0.network"
-
-do_install:append() {
-    install -d ${D}${sysconfdir}/systemd/network
-    install -m 0644 ${WORKDIR}/wlan0.network ${D}${sysconfdir}/systemd/network/
+# Fix udev-hwdb postinstall to defer to first boot
+pkg_postinst_ontarget:udev-hwdb () {
+    if test -x ${bindir}/udevadm; then
+        ${bindir}/udevadm hwdb --update || true
+    elif test -x ${bindir}/systemd-hwdb; then
+        ${bindir}/systemd-hwdb update || true
+    fi
 }
 
-FILES:${PN} += "${sysconfdir}/systemd/network/wlan0.network"
+# Remove the build-time postinstall
+pkg_postinst:udev-hwdb () {
+    # Defer to first boot
+    true
+}
+
+# No wlan0.network or networkd configuration; ConnMan manages WiFi/DHCP exclusively.
+

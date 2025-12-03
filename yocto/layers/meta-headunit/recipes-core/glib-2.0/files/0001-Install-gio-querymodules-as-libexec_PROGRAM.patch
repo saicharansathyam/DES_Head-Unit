@@ -1,0 +1,5 @@
+From <upstream commit>:
+@@ gio/meson.build @@1005,6 +1005,7 @@ gio_querymodules = executable('gio-querymodules',
+  'giomodule.c',
++ install: true,
+  c_args : gio_c_args,

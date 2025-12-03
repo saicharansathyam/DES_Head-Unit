@@ -1,0 +1,18 @@
+[Unit]
+Description=Force ConnMan WiFi at boot
+After=connman.service
+Requires=connman.service
+Before=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Enable WiFi
+ExecStart=/usr/bin/connmanctl enable wifi
+# Wait for WiFi to come up
+ExecStart=/bin/sleep 2
+# Scan for networks
+ExecStart=/usr/bin/connmanctl scan wifi
+
+[Install]
+WantedBy=multi-user.target

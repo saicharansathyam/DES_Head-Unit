@@ -1,0 +1,3 @@
+# Allow video group to access DRM devices
+KERNEL=="card[0-9]*", SUBSYSTEM=="drm", MODE="0666"
+KERNEL=="renderD[0-9]*", SUBSYSTEM=="drm", MODE="0666"

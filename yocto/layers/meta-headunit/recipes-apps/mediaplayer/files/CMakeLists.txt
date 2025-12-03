@@ -6,7 +6,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find required Qt packages (including VirtualKeyboard)
+# Find required Qt packages (WITHOUT WebView)
 find_package(Qt6 6.4 REQUIRED COMPONENTS
     Core
     Gui
@@ -25,7 +25,7 @@ add_executable(MediaPlayer
     resources.qrc
 )
 
-# Link Qt libraries (including VirtualKeyboard)
+# Link Qt libraries (WITHOUT WebView)
 target_link_libraries(MediaPlayer PRIVATE
     Qt6::Core
     Qt6::Gui

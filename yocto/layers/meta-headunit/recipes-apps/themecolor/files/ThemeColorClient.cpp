@@ -5,17 +5,17 @@
 
 ThemeColorClient::ThemeColorClient(QObject *parent) : QObject(parent)
 {
-    m_interface = new QDBusInterface("com.piracer.dashboard",
-                                     "/com/piracer/dashboard",
-                                     "com.piracer.dashboard",
+    m_interface = new QDBusInterface("com.seame.ThemeColor",
+                                     "/com/seame/ThemeColor",
+                                     "com.seame.ThemeColor",
                                      QDBusConnection::sessionBus(),
                                      this);
 
     // Connect to D-Bus ColorChanged signal
     QDBusConnection::sessionBus().connect(
-        "com.piracer.dashboard",
-        "/com/piracer/dashboard",
-        "com.piracer.dashboard",
+        "com.seame.ThemeColor",
+        "/com/seame/ThemeColor",
+        "com.seame.ThemeColor",
         "ColorChanged",
         this,
         SLOT(onColorChangedSignal(QString)));

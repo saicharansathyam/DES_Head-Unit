@@ -3,10 +3,12 @@ import QtQuick.Controls
 
 Rectangle {
     id: appSwitcher
+
     color: "#2d2d2d"
 
     signal switchToApp(int appId)
 
+    // Top border
     Rectangle {
         anchors.top: parent.top
         width: parent.width
@@ -18,13 +20,14 @@ Rectangle {
         anchors.centerIn: parent
         spacing: 12
 
-        // HomePage Button
+        // Home Button
         Button {
+            id: homeButton
             width: 100
             height: 50
 
             background: Rectangle {
-                color: surfaceManager.currentRightApp === 1000 ? "#0078d7" : "#404040"
+                color: surfaceManager.currentRightApp === 0 ? "#0078d7" : "#404040"
                 radius: 5
                 border.color: "#606060"
                 border.width: 1
@@ -38,7 +41,7 @@ Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: "⌂"
                     color: "white"
-                    font.pixelSize: 22
+                    font.pixelSize: 20
                 }
 
                 Text {
@@ -49,11 +52,12 @@ Rectangle {
                 }
             }
 
-            onClicked: switchToApp(1000)
+            onClicked: switchToApp(0)  // 0 = HomeView
         }
 
         // MediaPlayer Button
         Button {
+            id: mediaButton
             width: 100
             height: 50
 
@@ -88,6 +92,7 @@ Rectangle {
 
         // ThemeColor Button
         Button {
+            id: themeButton
             width: 100
             height: 50
 
@@ -122,6 +127,7 @@ Rectangle {
 
         // Navigation Button
         Button {
+            id: navButton
             width: 100
             height: 50
 
@@ -154,8 +160,9 @@ Rectangle {
             onClicked: switchToApp(1004)
         }
 
-        // Settings Button
+        // YouTube Button
         Button {
+            id: youtubeButton
             width: 100
             height: 50
 

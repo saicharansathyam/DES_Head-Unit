@@ -1,0 +1,19 @@
+[Unit]
+Description=Mock Dashboard D-Bus Service
+After=dbus-session.service
+Requires=dbus-session.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mock-dashboard-service
+Restart=always
+RestartSec=3
+
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
+Environment="XDG_RUNTIME_DIR=/run/user/0"
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

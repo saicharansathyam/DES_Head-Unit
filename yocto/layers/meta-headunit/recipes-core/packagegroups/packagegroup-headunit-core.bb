@@ -36,11 +36,11 @@ RDEPENDS:packagegroup-headunit-apps = " \
     themecolor \
     settings \
     mock-dbus \
-    headunit-startup \
 "
 
 RDEPENDS:packagegroup-headunit-system = " \
     dbus \
+    dbus-session \
     dbus-glib \
     python3 \
     python3-core \

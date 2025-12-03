@@ -1,0 +1,16 @@
+[Unit]
+Description=Unified D-Bus Service for HeadUnit IVI
+After=dbus-session.service
+Requires=dbus-session.service
+Before=compositor.service instrument-cluster.service gearselector.service mediaplayer.service themecolor.service
+
+[Service]
+Type=simple
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
+Environment="HARDWARE_MODE=0"
+ExecStart=/usr/bin/python3 /usr/bin/unified-dbus-service.py
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

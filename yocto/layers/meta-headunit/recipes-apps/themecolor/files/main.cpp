@@ -5,33 +5,39 @@
 
 int main(int argc, char *argv[])
 {
+    // Trust systemd service environment:
+    // - QT_QPA_PLATFORM=wayland      (set by service)
+    // - WAYLAND_DISPLAY=wayland-2     (set by service)
+    // - IVI_SURFACE_ID=1003           (set by service)
+    
     QGuiApplication app(argc, argv);
-    
-    // Create theme client
-    ThemeColorClient themeClient;
-    
-    // Setup QML engine
+
+    app.setApplicationName("ThemeColor");
+    app.setOrganizationName("HeadUnit");
+
     QQmlApplicationEngine engine;
-    
-    // Register ThemeColorClient as QML type
-    qmlRegisterType<ThemeColorClient>("ThemeColor", 1, 0, "ThemeColorClient");
-    
-    // Load QML from Qt resource system
-    const QUrl url(u"qrc:/qt/qml/ThemeColor/Main.qml"_qs);
-    
-    QObject::connect(
-        &engine, &QQmlApplicationEngine::objectCreated,
-        &app, [url](QObject *obj, const QUrl &objUrl) {
-            if (!obj && url == objUrl)
-                QCoreApplication::exit(-1);
-        },
-        Qt::QueuedConnection
-    );
-    
+
+    ThemeColorClient themeClient;
+    engine.rootContext()->setContextProperty("themeClient", &themeClient);
+
+    const QUrl url(QStringLiteral("qrc:/Main.qml"));
+
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+                         if (!obj && url == objUrl) {
+                             qCritical() << "Failed to load Main.qml";
+                             QCoreApplication::exit(-1);
+                         }
+                     }, Qt::QueuedConnection);
+
     engine.load(url);
-    
-    if (engine.rootObjects().isEmpty())
+
+    if (engine.rootObjects().isEmpty()) {
+        qCritical() << "No QML objects loaded!";
         return -1;
-    
+    }
+
+    qDebug() << "ThemeColor started successfully";
+
     return app.exec();
 }

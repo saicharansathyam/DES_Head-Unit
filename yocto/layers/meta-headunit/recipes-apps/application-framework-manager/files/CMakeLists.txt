@@ -33,3 +33,7 @@ target_compile_options(headunit-afm PRIVATE
 
 # Create logs directory at build time
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/logs)
+# Install directive
+install(TARGETS headunit-afm
+    RUNTIME DESTINATION bin
+)
