@@ -30,10 +30,32 @@ IMAGE_INSTALL:append = " \
     mediaplayer \
     themecolor \
     instrument-cluster \
+    can-setup \
+    rc-piracer \
     headunit-startup \
     python3 \
     python3-dbus \
     python3-pygobject \
+    python3-numpy \
+    python3-can \
+    python3-pyserial \
+    python3-smbus \
+    python3-piracer-py \
+    python3-evdev \
+    can-utils \
+    kernel-module-can \
+    kernel-module-can-dev \
+    kernel-module-can-raw \
+    kernel-module-mcp251x \
+    kernel-module-mcp251xfd \
+    adafruit-blinka \
+    adafruit-platformdetect \
+    adafruit-pureio \
+    adafruit-circuitpython-busdevice \
+    adafruit-circuitpython-register \
+    adafruit-circuitpython-ina219 \
+    libgpiod \
+    i2c-tools \
     systemd \
     dbus \
     bluez5 \
@@ -67,6 +89,24 @@ IMAGE_INSTALL:append = " \
 "
 
 IMAGE_LINGUAS = "en-us"
+
+# Enable WIC image generation for proper SD card flashing
+IMAGE_FSTYPES += "wic.bz2 wic.bmap"
+
+# Remove overlays directory before WIC image creation to prevent copy errors
+do_image_wic[prefuncs] += "remove_overlays_dir"
+
+python remove_overlays_dir() {
+    import os
+    import shutil
+
+    deploy_dir = d.getVar('DEPLOY_DIR_IMAGE')
+    overlays_dir = os.path.join(deploy_dir, 'bootfiles', 'overlays')
+
+    if os.path.exists(overlays_dir):
+        bb.note(f"Removing {overlays_dir} to prevent WIC copy issues")
+        shutil.rmtree(overlays_dir)
+}
 
 DISTRO_FEATURES:append = " systemd wayland wifi bluetooth alsa pulseaudio touchscreen dbus opengl ivi-shell"
 DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"

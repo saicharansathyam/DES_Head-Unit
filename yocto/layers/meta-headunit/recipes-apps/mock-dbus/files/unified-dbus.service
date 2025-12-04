@@ -1,16 +1,34 @@
 [Unit]
-Description=Unified D-Bus Service for HeadUnit IVI
-After=dbus-session.service
-Requires=dbus-session.service
-Before=compositor.service instrument-cluster.service gearselector.service mediaplayer.service themecolor.service
+Description=Unified D-Bus Service for HeadUnit IVI (Hardware Mode)
+After=dbus.service
+Requires=dbus.service
+Before=compositor.service instrument-cluster.service rc-piracer.service
 
 [Service]
 Type=simple
-Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/0/bus"
-Environment="HARDWARE_MODE=0"
+User=root
+
+# CRITICAL: Use system bus
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket"
+
+# Enable hardware mode (CAN + INA219)
+Environment="HARDWARE_MODE=1"
+
+# CAN interface (can0 or can1)
+Environment="CAN_IFACE=can0"
+
+# Python unbuffered for real-time logging
+Environment="PYTHONUNBUFFERED=1"
+
+# Wait for CAN interface to be ready
+ExecStartPre=/bin/sleep 2
+
 ExecStart=/usr/bin/python3 /usr/bin/unified-dbus-service.py
-Restart=on-failure
-RestartSec=2
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

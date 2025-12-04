@@ -1,0 +1,12 @@
+[Unit]
+Description=CAN Interface Setup (can0/can1)
+After=network.target
+Before=unified-dbus.service rc-piracer.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/can-setup.sh
+
+[Install]
+WantedBy=multi-user.target

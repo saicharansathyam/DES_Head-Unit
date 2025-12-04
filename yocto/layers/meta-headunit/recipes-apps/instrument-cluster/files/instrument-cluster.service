@@ -20,9 +20,6 @@ Environment="QT_QPA_PLATFORM=wayland"
 Environment="QT_WAYLAND_DISABLE_WINDOWDECORATION=1"
 Environment="QT_QUICK_BACKEND=software"
 
-# IVI Surface ID for instrument cluster
-Environment="IVI_SURFACE_ID=2001"
-
 # Logging
 Environment="QT_LOGGING_RULES=*.debug=false;qt.qpa.*=true"
 

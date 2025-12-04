@@ -17,21 +17,22 @@ Window {
     // The compositor controls the window chrome
     // flags: Qt.FramelessWindowHint  // REMOVE THIS LINE
 
-    // Create the gear handler instance
-    GearHandler {
-        id: gearHandler
+    // gearHandler is provided by main.cpp via setContextProperty
+    // Connect to its signals using Connections
+    Connections {
+        target: gearHandler
 
-        onCurrentGearChanged: {
-            console.log("Gear changed to:", currentGear)
+        function onCurrentGearChanged() {
+            console.log("Gear changed to:", gearHandler.currentGear)
         }
 
-        onDbusConnectionError: function(error) {
+        function onDbusConnectionError(error) {
             console.error("D-Bus error:", error)
             statusText.text = "Disconnected"
             statusIndicator.color = "#ef4444"
         }
 
-        onDbusConnectionRestored: {
+        function onDbusConnectionRestored() {
             console.log("D-Bus connection restored")
             statusText.text = "Connected"
             statusIndicator.color = "#10b981"

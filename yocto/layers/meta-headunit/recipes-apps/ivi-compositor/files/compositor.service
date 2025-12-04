@@ -1,27 +1,27 @@
 [Unit]
 Description=HeadUnit IVI Nested Compositor (Wayland Client to Weston)
-After=weston.service dbus.service dbus-session.service
+After=weston.service dbus.service
 Requires=weston.service dbus.service
 Before=gearselector.service mediaplayer.service themecolor.service
 
 [Service]
 Type=simple
 User=root
-Environment="XDG_RUNTIME_DIR=/run/user/0"
+
+# CRITICAL FIX: Use /run instead of /run/user/0
+Environment="XDG_RUNTIME_DIR=/run"
 Environment="WAYLAND_DISPLAY=wayland-0"
 Environment="QT_QPA_PLATFORM=wayland"
 Environment="QT_WAYLAND_DISABLE_WINDOWDECORATION=1"
-Environment="IVI_SURFACE_ID=1001"
 Environment="QT_LOGGING_RULES=*.debug=false;qt.qpa.*=true;qt.wayland.*=true"
 
-ExecStartPre=/bin/mkdir -p /run/user/0
-ExecStartPre=/bin/chmod 700 /run/user/0
-ExecStartPre=/bin/sleep 2
-
+# Wait longer for Weston outputs to initialize
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/ivi-compositor
 
 Restart=always
 RestartSec=5
+
 StandardOutput=journal
 StandardError=journal
 

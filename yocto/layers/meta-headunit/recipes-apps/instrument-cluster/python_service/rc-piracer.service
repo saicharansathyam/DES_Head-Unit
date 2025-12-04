@@ -1,0 +1,33 @@
+[Unit]
+Description=PiRacer Remote Controller (GamePad)
+After=unified-dbus.service
+Requires=unified-dbus.service
+
+[Service]
+Type=simple
+User=root
+
+# D-Bus configuration - use system bus
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket"
+
+# Runtime directory
+Environment="XDG_RUNTIME_DIR=/run"
+
+# Python path
+Environment="PYTHONUNBUFFERED=1"
+
+# Wait for D-Bus service to be ready
+ExecStartPre=/bin/sleep 2
+
+# Start RC controller
+ExecStart=/usr/bin/python3 /usr/bin/rc_piracer.py
+
+# Restart on failure (gamepad might disconnect/reconnect)
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -41,7 +41,7 @@ S = "${WORKDIR}"
 inherit qt6-cmake systemd
 
 SYSTEMD_SERVICE:${PN} = "mediaplayer.service"
-SYSTEMD_AUTO_ENABLE = "enable"
+SYSTEMD_AUTO_ENABLE = "disable"
 
 EXTRA_OECMAKE += " \
     -DCMAKE_BUILD_TYPE=Release \

@@ -1,0 +1,36 @@
+// Device tree overlay for MCP2518FD CAN controller on SPI0.0
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target = <&spi0>;
+        __overlay__ {
+            status = "okay";
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            mcp251xfd0: mcp251xfd@0 {
+                compatible = "microchip,mcp2518fd";
+                reg = <0>;
+                spi-max-frequency = <20000000>;
+                interrupt-parent = <&gpio>;
+                interrupts = <25 8>; /* IRQ_TYPE_LEVEL_LOW */
+                clocks = <&mcp251xfd0_osc>;
+            };
+        };
+    };
+
+    fragment@1 {
+        target-path = "/";
+        __overlay__ {
+            mcp251xfd0_osc: mcp251xfd0-osc {
+                compatible = "fixed-clock";
+                #clock-cells = <0>;
+                clock-frequency = <40000000>;
+            };
+        };
+    };
+};

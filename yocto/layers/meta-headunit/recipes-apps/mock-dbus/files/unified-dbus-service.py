@@ -28,9 +28,22 @@ import sys
 import random
 import time
 import os
+import threading
+import numpy as np
 
 # ==================== Configuration ====================
 HARDWARE_MODE = os.environ.get('HARDWARE_MODE', '0') == '1'
+
+# Hardware imports (only if hardware mode)
+if HARDWARE_MODE:
+    try:
+        import can
+        import board
+        import busio
+        from adafruit_ina219 import INA219
+    except ImportError as e:
+        print(f"WARNING: Hardware libraries not available: {e}")
+        HARDWARE_MODE = False
 
 # Service definitions
 DASHBOARD_SERVICE = "com.seame.Dashboard"
@@ -52,9 +65,52 @@ GEARSELECTOR_OBJECT = "/com/seame/GearSelector"
 CAN_SPEED_ID = 0x100
 CAN_GEAR_ID = 0x102
 CAN_TURN_ID = 0x103
-INA219_ADDRESS = 0x41
+INA219_ADDRESS = 0x40
 MIN_VOLTAGE = 11.0
 MAX_VOLTAGE = 12.6
+
+# Kalman filter parameters
+DT0 = 0.05
+PROCESS_VAR = 4.0
+MEAS_VAR = 3.0
+
+
+# ==================== Kalman Filter ====================
+class KalmanSpeedFilter:
+    """2-state Kalman filter for speed smoothing (velocity, acceleration)"""
+    def __init__(self, dt=DT0, process_var=PROCESS_VAR, meas_var=MEAS_VAR):
+        self.x = np.zeros((2, 1))  # [velocity, acceleration]
+        self.P = np.eye(2) * 100.0
+        self.dt = dt
+
+        self.F = np.array([[1, dt], [0, 1]])
+        self.H = np.array([[1, 0]])
+        self.R = np.array([[meas_var]])
+        self.Q = np.array([[dt**4/4, dt**3/2], [dt**3/2, dt**2]]) * process_var
+
+    def update(self, z, dt=None):
+        """Update filter with new measurement z"""
+        if dt is not None and abs(dt - self.dt) > 1e-3:
+            self.dt = dt
+            self.F = np.array([[1, dt], [0, 1]])
+            self.Q = np.array([[dt**4/4, dt**3/2], [dt**3/2, dt**2]]) * PROCESS_VAR
+
+        # Predict
+        self.x = self.F @ self.x
+        self.P = self.F @ self.P @ self.F.T + self.Q
+
+        # Update
+        y = np.array([[z]]) - self.H @ self.x
+        S = self.H @ self.P @ self.H.T + self.R
+        K = self.P @ self.H.T @ np.linalg.inv(S)
+        self.x = self.x + K @ y
+        self.P = (np.eye(2) - K @ self.H) @ self.P
+
+        # Clamp to non-negative
+        if self.x[0, 0] < 0.0:
+            self.x[0, 0] = 0.0
+
+        return float(self.x[0, 0])
 
 
 # ==================== Dashboard Service ====================
@@ -82,16 +138,19 @@ class DashboardService(dbus.service.Object):
         self.accent_color = "#00ff00"
         self.turn_signal = "off"
         
-        # Hardware integration (future)
+        # Hardware integration
         self.can_bus = None
         self.ina219 = None
         self.kalman_filter = None
-        
-        # Start mock simulation if not in hardware mode
-        if not hardware_mode:
+        self._last_speed_ts = None
+
+        # Start hardware or mock mode
+        if hardware_mode:
+            self.init_hardware()
+        else:
             GLib.timeout_add(100, self._simulate_speed)
             GLib.timeout_add(1000, self._simulate_battery)
-        
+
         print(f"✓ Dashboard Service: {DASHBOARD_SERVICE}")
         print(f"  Mode: {'HARDWARE' if hardware_mode else 'MOCK'}")
     
@@ -111,14 +170,41 @@ class DashboardService(dbus.service.Object):
         self.BatteryPercentChanged(self.battery_percent)
         return True
     
-    # ==================== Hardware Integration (TODO: Next Session) ====================
+    # ==================== Hardware Integration ====================
     def init_hardware(self):
         """Initialize CAN bus, I2C sensors, Kalman filter"""
-        # TODO: Initialize CAN bus (can0/can1)
-        # TODO: Initialize INA219 I2C sensor
-        # TODO: Initialize Kalman filter for speed smoothing
-        # TODO: Start hardware read threads
-        pass
+        print("[Hardware] Initializing...")
+
+        # Initialize Kalman filter
+        self.kalman_filter = KalmanSpeedFilter()
+        print("  ✓ Kalman filter ready")
+
+        # Initialize CAN bus
+        can_iface = os.environ.get("CAN_IFACE", "can0")
+        for iface in [can_iface, "can0", "can1"]:
+            try:
+                self.can_bus = can.interface.Bus(channel=iface, bustype='socketcan')
+                print(f"  ✓ CAN connected ({iface})")
+                break
+            except Exception as e:
+                print(f"  ✗ CAN {iface} failed: {e}")
+
+        if not self.can_bus:
+            print("  ✗ CAN initialization failed - no valid interface")
+            return
+
+        # Initialize INA219 battery sensor
+        try:
+            i2c_bus = busio.I2C(board.SCL, board.SDA)
+            self.ina219 = INA219(i2c_bus, INA219_ADDRESS)
+            print("  ✓ INA219 ready (0x40)")
+        except Exception as e:
+            print(f"  ✗ INA219 init failed: {e}")
+
+        # Start hardware read threads
+        threading.Thread(target=self._read_can_loop, daemon=True).start()
+        threading.Thread(target=self._poll_battery_loop, daemon=True).start()
+        print("[Hardware] All threads started")
     
     def update_speed_from_can(self, speed_cms):
         """Called when CAN 0x100 message received (2 bytes, cm/s)"""
@@ -150,8 +236,87 @@ class DashboardService(dbus.service.Object):
     def send_to_can(self, msg_id, data):
         """Send message to CAN bus (if hardware mode)"""
         if self.can_bus:
-            # TODO: Implement CAN message sending
-            pass
+            try:
+                msg = can.Message(arbitration_id=msg_id, data=data, is_extended_id=False)
+                self.can_bus.send(msg)
+            except Exception as e:
+                print(f"CAN send error: {e}")
+
+    def _read_can_loop(self):
+        """Background thread to read CAN messages"""
+        print("[CAN] Listening for 0x100 (speed), 0x102 (gear), 0x103 (turn)")
+        while True:
+            try:
+                message = self.can_bus.recv(timeout=1.0)
+                now = time.monotonic()
+                if message:
+                    self._process_can_message(message, now)
+            except Exception as e:
+                print(f"CAN read error: {e}")
+                time.sleep(1)
+
+    def _process_can_message(self, message, now_ts):
+        """Process incoming CAN message"""
+        try:
+            msg_id = message.arbitration_id
+            data = message.data
+
+            if msg_id == CAN_SPEED_ID and len(data) >= 2:
+                # Speed from Arduino (big-endian, cm/s)
+                speed_raw = (data[0] << 8) | data[1]
+                meas_cms = float(speed_raw)
+
+                # Calculate dt for Kalman filter
+                dt = None
+                if self._last_speed_ts is not None:
+                    dt = now_ts - self._last_speed_ts
+                self._last_speed_ts = now_ts
+
+                # Apply Kalman filtering
+                filt_cms = self.kalman_filter.update(meas_cms, dt=dt)
+
+                # Update speed
+                if abs(self.speed - filt_cms) > 0.1:
+                    self.speed = filt_cms
+                    GLib.idle_add(self.SpeedChanged, float(filt_cms))
+
+            elif msg_id == CAN_GEAR_ID and len(data) >= 1:
+                # Gear from CAN
+                gear_char = chr(data[0]) if data[0] != 0 else 'P'
+                if self.current_gear != gear_char:
+                    self.current_gear = gear_char
+                    GLib.idle_add(self.GearChanged, gear_char)
+
+            elif msg_id == CAN_TURN_ID and len(data) >= 1:
+                # Turn signal from CAN
+                turn_map = {0: 'off', 1: 'left', 2: 'right', 3: 'hazard'}
+                turn_mode = turn_map.get(data[0], 'off')
+                if self.turn_signal != turn_mode:
+                    self.turn_signal = turn_mode
+                    GLib.idle_add(self.TurnSignalChanged, turn_mode)
+
+        except Exception as e:
+            print(f"CAN message processing error: {e}")
+
+    def _poll_battery_loop(self):
+        """Background thread to poll battery sensor"""
+        while True:
+            try:
+                if self.ina219:
+                    bus_voltage = self.ina219.bus_voltage
+                    percent = (bus_voltage - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE) * 100.0
+                    percent = max(0.0, min(percent, 100.0))
+
+                    if abs(self.battery_percent - percent) > 0.1:
+                        self.battery_voltage = bus_voltage
+                        self.battery_percent = percent
+                        GLib.idle_add(self.BatteryVoltageChanged, bus_voltage)
+                        GLib.idle_add(self.BatteryPercentChanged, percent)
+                        GLib.idle_add(self.BatteryChanged, percent)
+            except Exception as e:
+                print(f"Battery read error: {e}")
+
+            time.sleep(1)
     
     # ==================== D-Bus Methods ====================
     @dbus.service.method(DASHBOARD_SERVICE, out_signature='d')

@@ -8,19 +8,22 @@
 
 int main(int argc, char *argv[])
 {
-    // CRITICAL: Set IVI Surface ID for Weston IVI-Shell
-    qputenv("IVI_SURFACE_ID", "1001");
-    
     // Force Wayland platform (we're now a Wayland CLIENT, not compositor)
     qputenv("QT_QPA_PLATFORM", "wayland");
-    
+
     // Disable window decorations
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-    
+
+    // Set Wayland app_id before QGuiApplication
+    qputenv("QT_WAYLAND_SHELL_INTEGRATION", "xdg-shell");
+
     QGuiApplication app(argc, argv);
     app.setOrganizationName("HeadUnit");
     app.setOrganizationDomain("com.headunit");
-    app.setApplicationName("HeadUnit");
+    app.setApplicationName("ivi-compositor");
+
+    // Set desktop file name to match app-id for Wayland
+    app.setDesktopFileName("ivi-compositor");
 
     // Create D-Bus manager
     DBusManager dbusManager;
@@ -32,7 +35,7 @@ int main(int argc, char *argv[])
 
     qDebug() << "=== Starting HeadUnit Controller (Wayland Client) ===";
     qDebug() << "Platform:" << QGuiApplication::platformName();
-    qDebug() << "IVI Surface ID: 1001 (Layer 1000 -> HDMI-A-1)";
+    qDebug() << "App-ID: ivi-compositor (HDMI-A-1)";
     qDebug() << "Current directory:" << QDir::currentPath();
 
     const QUrl url(QStringLiteral("qrc:/qml/Main.qml"));

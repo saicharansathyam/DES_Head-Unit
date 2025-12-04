@@ -47,5 +47,10 @@ FILES:${PN} = " \
 RDEPENDS:${PN} += " \
     python3-dbus \
     python3-pygobject \
+    python3-numpy \
+    python3-can \
+    adafruit-blinka \
+    adafruit-circuitpython-ina219 \
     dbus \
+    can-utils \
 "

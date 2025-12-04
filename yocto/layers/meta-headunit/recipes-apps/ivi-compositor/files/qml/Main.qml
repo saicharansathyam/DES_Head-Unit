@@ -195,7 +195,7 @@ WaylandCompositor {
 
     Component.onCompleted: {
         console.log("=== HeadUnit Nested Compositor Ready ===")
-        console.log("Our IVI Surface ID: 1001 (to Weston)")
+        console.log("Our App-ID: ivi-compositor (to Weston)")
         console.log("Our Wayland Socket: wayland-2 (for apps)")
         console.log("Target Display: HDMI-A-1 via Weston")
         console.log("Resolution: 1024x600")

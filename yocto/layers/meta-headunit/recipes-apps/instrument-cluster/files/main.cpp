@@ -5,20 +5,26 @@
 
 int main(int argc, char *argv[])
 {
-    // CRITICAL: Set IVI Surface ID for Weston IVI-Shell
-    qputenv("IVI_SURFACE_ID", "2001");
-    
     // Force Wayland platform
     qputenv("QT_QPA_PLATFORM", "wayland");
-    
+
     // Disable window decorations
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-    
+
+    // Set Wayland app_id before QGuiApplication
+    qputenv("QT_WAYLAND_SHELL_INTEGRATION", "xdg-shell");
+
     QGuiApplication app(argc, argv);
+    app.setOrganizationName("HeadUnit");
+    app.setOrganizationDomain("com.headunit");
+    app.setApplicationName("instrument-cluster");
+
+    // Set desktop file name to match app-id for Wayland
+    app.setDesktopFileName("instrument-cluster");
 
     qDebug() << "=== Starting Instrument Cluster (Wayland Client) ===";
     qDebug() << "Platform:" << QGuiApplication::platformName();
-    qDebug() << "IVI Surface ID: 2001 (Layer 2000 -> HDMI-A-2)";
+    qDebug() << "App-ID: instrument-cluster (HDMI-A-2)";
 
     QQmlApplicationEngine engine;
 
