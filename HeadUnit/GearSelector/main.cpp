@@ -1,40 +1,51 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QDebug>
 #include "gs_handler.h"
+#include "../theme_client.h"
 
 int main(int argc, char *argv[])
 {
-    // Don't set QT_QPA_PLATFORM here - it should come from environment
-    // when launched by the lifecycle manager
-
     QGuiApplication app(argc, argv);
 
-    app.setOrganizationName("HeadUnit");
     app.setApplicationName("GearSelector");
+    app.setOrganizationName("HeadUnit");
 
-    // Register GearHandler type
-    qmlRegisterType<GS_Handler>("GearSelector", 1, 0, "GearHandler");
+    qDebug() << "Starting GearSelector...";
+
+    // Create gear handler
+    GS_Handler gearHandler;
+
+    // Create theme client
+    ThemeClient themeClient;
 
     QQmlApplicationEngine engine;
 
+    // Expose to QML
+    engine.rootContext()->setContextProperty("gearHandler", &gearHandler);
+    engine.rootContext()->setContextProperty("theme", &themeClient);
+
+    // Load QML from resources
     const QUrl url(QStringLiteral("qrc:/Main.qml"));
 
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
                          if (!obj && url == objUrl) {
+                             qCritical() << "Failed to load Main.qml";
                              QCoreApplication::exit(-1);
                          }
                      }, Qt::QueuedConnection);
 
+    qDebug() << "Loading QML from:" << url;
     engine.load(url);
 
     if (engine.rootObjects().isEmpty()) {
+        qCritical() << "No QML objects loaded!";
         return -1;
     }
 
-    qDebug() << "GearSelector application started";
-    qDebug() << "Platform:" << QGuiApplication::platformName();
+    qDebug() << "GearSelector started successfully";
 
     return app.exec();
 }

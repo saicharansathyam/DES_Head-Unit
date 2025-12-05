@@ -5,6 +5,6 @@
         <file>qml/MenuButton.qml</file>
         <file>qml/WiFiSettings.qml</file>
         <file>qml/BluetoothSettings.qml</file>
-        <file>qml/SoundSettings.qml</file>
+        <file>qml/TimeSettings.qml</file>
     </qresource>
 </RCC>

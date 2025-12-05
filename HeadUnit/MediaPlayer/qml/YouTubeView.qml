@@ -22,6 +22,26 @@ Item {
                 if (loadRequest.status === WebView.LoadSucceededStatus) {
                     console.log("YouTube loaded successfully")
                     loadingIndicator.visible = false
+
+                    // Inject JavaScript to detect focus on input fields
+                    youtubeView.runJavaScript(
+                        "(function() {" +
+                        "  document.addEventListener('focusin', function(e) {" +
+                        "    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || " +
+                        "        e.target.contentEditable === 'true') {" +
+                        "      console.log('Input field focused');" +
+                        "      Qt.inputMethod.show();" +
+                        "    }" +
+                        "  });" +
+                        "  document.addEventListener('focusout', function(e) {" +
+                        "    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || " +
+                        "        e.target.contentEditable === 'true') {" +
+                        "      console.log('Input field unfocused');" +
+                        "      Qt.inputMethod.hide();" +
+                        "    }" +
+                        "  });" +
+                        "})();"
+                    )
                 } else if (loadRequest.status === WebView.LoadFailedStatus) {
                     console.error("Failed to load YouTube:", loadRequest.errorString)
                     errorDisplay.visible = true

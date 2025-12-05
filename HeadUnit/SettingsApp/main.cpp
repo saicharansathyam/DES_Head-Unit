@@ -2,39 +2,27 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QDebug>
-
-#include "settingsmanager.h"
-#include "wifimanager.h"
-#include "bluetoothmanager.h"
+#include "../theme_client.h"
+#include "dbus_handler.h"
 
 int main(int argc, char *argv[])
 {
-    qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
-    qputenv("QT_IVI_SURFACE_ID", "1005");  // IVI ID for Settings App
-
     QGuiApplication app(argc, argv);
-
     app.setOrganizationName("HeadUnit");
     app.setOrganizationDomain("com.headunit");
     app.setApplicationName("SettingsApp");
 
-    // Create managers
-    WiFiManager wifiManager;
-    BluetoothManager bluetoothManager;
-    SettingsManager settingsManager(&wifiManager, &bluetoothManager);
+    // Only need D-Bus handler and theme
+    DBusHandler dbusHandler;
+    ThemeClient themeClient;
 
     QQmlApplicationEngine engine;
 
-    // Expose managers to QML
-    engine.rootContext()->setContextProperty("settingsManager", &settingsManager);
-    engine.rootContext()->setContextProperty("wifiManager", &wifiManager);
-    engine.rootContext()->setContextProperty("bluetoothManager", &bluetoothManager);
-
-    qDebug() << "Starting Settings Application...";
-    qDebug() << "IVI Surface ID: 1006";
+    // Expose only what's needed to QML
+    engine.rootContext()->setContextProperty("dbusHandler", &dbusHandler);
+    engine.rootContext()->setContextProperty("theme", &themeClient);
 
     const QUrl url(QStringLiteral("qrc:/qml/Main.qml"));
-
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
                          if (!obj && url == objUrl) {
@@ -51,7 +39,5 @@ int main(int argc, char *argv[])
     }
 
     qDebug() << "Settings Application started successfully";
-
     return app.exec();
 }
-

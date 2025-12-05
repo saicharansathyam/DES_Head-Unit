@@ -6,13 +6,15 @@
 MP_Handler::MP_Handler(QObject *parent)
     : QObject(parent)
     , m_sourceType("usb")
-    , m_playing(false)
+    , m_isPlaying(false)
     , m_volume(50)
     , m_position(0)
     , m_duration(0)
     , m_currentState("Stopped")
     , m_serviceConnected(false)
     , m_currentTrackIndex(-1)
+    , m_currentTrack("No Track Playing")
+    , m_currentArtist("Unknown Artist")
     , m_serviceInterface(nullptr)
 {
     m_positionPollTimer = new QTimer(this);
@@ -158,7 +160,8 @@ void MP_Handler::syncUsbDataFromService()
     QDBusReply<QStringList> filesReply = m_serviceInterface->call("GetMediaFiles");
     if (filesReply.isValid()) {
         m_mediaFiles = filesReply.value();
-        emit mediaFilesChanged();
+        emit mediaFileListChanged();
+        buildPlaylist();
         qDebug() << "Synced media files:" << m_mediaFiles.count() << "files";
     }
 }
@@ -180,17 +183,59 @@ void MP_Handler::callService(const QString &method, const QVariantList &args)
 
 QString MP_Handler::source() const { return m_source; }
 QString MP_Handler::sourceType() const { return m_sourceType; }
-bool MP_Handler::playing() const { return m_playing; }
+bool MP_Handler::isPlaying() const { return m_isPlaying; }
 int MP_Handler::volume() const { return m_volume; }
-qint64 MP_Handler::position() const { return m_position; }
+qint64 MP_Handler::currentPosition() const { return m_position; }
 qint64 MP_Handler::duration() const { return m_duration; }
 QString MP_Handler::currentState() const { return m_currentState; }
 bool MP_Handler::serviceConnected() const { return m_serviceConnected; }
+QString MP_Handler::currentTrack() const { return m_currentTrack; }
+QString MP_Handler::currentArtist() const { return m_currentArtist; }
 QStringList MP_Handler::usbDevices() const { return m_usbDevices; }
-QStringList MP_Handler::mediaFiles() const { return m_mediaFiles; }
+QStringList MP_Handler::mediaFileList() const { return m_mediaFiles; }
 QString MP_Handler::currentDevice() const { return m_currentDevice; }
-int MP_Handler::currentTrackIndex() const { return m_currentTrackIndex; }
+int MP_Handler::currentMediaIndex() const { return m_currentTrackIndex; }
 QString MP_Handler::currentFileName() const { return m_currentFileName; }
+
+QVariantList MP_Handler::playlist() const
+{
+    QVariantList list;
+    for (int i = 0; i < m_mediaFiles.count(); ++i) {
+        QVariantMap track;
+        QFileInfo fileInfo(m_mediaFiles[i]);
+        QString fileName = fileInfo.completeBaseName(); // Remove extension
+
+        track["title"] = fileName;
+        track["artist"] = "Unknown Artist";
+        track["duration"] = "0:00";
+        track["isPlaying"] = (i == m_currentTrackIndex && m_isPlaying);
+
+        list.append(track);
+    }
+    return list;
+}
+
+void MP_Handler::buildPlaylist()
+{
+    emit playlistChanged();
+}
+
+void MP_Handler::updateTrackInfo()
+{
+    if (m_currentTrackIndex >= 0 && m_currentTrackIndex < m_mediaFiles.count()) {
+        QFileInfo fileInfo(m_mediaFiles[m_currentTrackIndex]);
+        QString fileName = fileInfo.completeBaseName();
+
+        m_currentTrack = fileName;
+        m_currentArtist = "Unknown Artist";
+    } else {
+        m_currentTrack = "No Track Playing";
+        m_currentArtist = "Unknown Artist";
+    }
+
+    emit currentTrackChanged();
+    emit currentArtistChanged();
+}
 
 void MP_Handler::setSource(const QString &src)
 {
@@ -206,7 +251,10 @@ void MP_Handler::setSource(const QString &src)
         callService("SetSource", {src, m_sourceType});
 
         m_position = 0;
-        emit positionChanged();
+        emit currentPositionChanged();
+
+        updateTrackInfo();
+
         qDebug() << "Media source changed to:" << src << "type:" << m_sourceType;
     }
 }
@@ -239,7 +287,7 @@ void MP_Handler::setPosition(qint64 pos)
 {
     if (m_position != pos) {
         m_position = pos;
-        emit positionChanged();
+        emit currentPositionChanged();
     }
 }
 
@@ -270,8 +318,27 @@ void MP_Handler::stop()
     callService("Stop");
     m_positionPollTimer->stop();
     m_position = 0;
-    emit positionChanged();
+    emit currentPositionChanged();
     qDebug() << "Stop command sent";
+}
+
+void MP_Handler::togglePlayPause()
+{
+    if (m_isPlaying) {
+        pause();
+    } else {
+        play();
+    }
+}
+
+void MP_Handler::toggleShuffle()
+{
+    qDebug() << "Toggle shuffle (not implemented yet)";
+}
+
+void MP_Handler::toggleRepeat()
+{
+    qDebug() << "Toggle repeat (not implemented yet)";
 }
 
 void MP_Handler::next()
@@ -301,7 +368,7 @@ void MP_Handler::seek(qint64 position)
     if (position >= 0 && position <= m_duration) {
         callService("Seek", {position});
         m_position = position;
-        emit positionChanged();
+        emit currentPositionChanged();
         qDebug() << "Seek to position:" << position;
     }
 }
@@ -310,7 +377,7 @@ void MP_Handler::selectUsbDevice(const QString &devicePath)
 {
     callService("SelectUsbDevice", {devicePath});
     m_currentTrackIndex = -1;
-    emit currentTrackIndexChanged();
+    emit currentMediaIndexChanged();
     qDebug() << "Selected USB device:" << devicePath;
 }
 
@@ -322,14 +389,22 @@ void MP_Handler::selectMediaFile(int index)
     }
 
     m_currentTrackIndex = index;
-    emit currentTrackIndexChanged();
+    emit currentMediaIndexChanged();
+    emit playlistChanged();
 
     callService("SelectMediaFile", {index});
+
+    updateTrackInfo();
 
     // Auto-play the selected file
     QTimer::singleShot(500, this, &MP_Handler::play);
 
     qDebug() << "Selected and playing media file:" << m_mediaFiles[index] << "at index:" << index;
+}
+
+void MP_Handler::playTrack(int index)
+{
+    selectMediaFile(index);
 }
 
 void MP_Handler::refreshUsbDevices()
@@ -338,28 +413,40 @@ void MP_Handler::refreshUsbDevices()
     qDebug() << "Refreshing USB devices";
 }
 
+void MP_Handler::refreshMediaFiles()
+{
+    // Request media files refresh from service
+    syncUsbDataFromService();
+    qDebug() << "Refreshing media files";
+}
+
 void MP_Handler::handleServicePlaybackStateChanged(const QString &state)
 {
     qDebug() << "Playback state changed:" << state;
     updateState(state);
 
+    bool wasPlaying = m_isPlaying;
+
     if (state == "Playing") {
-        m_playing = true;
+        m_isPlaying = true;
         m_positionPollTimer->start();
     } else {
-        m_playing = false;
+        m_isPlaying = false;
         if (state == "Stopped") {
             m_positionPollTimer->stop();
         }
     }
 
-    emit playingChanged();
+    if (wasPlaying != m_isPlaying) {
+        emit isPlayingChanged();
+        emit playlistChanged(); // Update playlist to show playing state
+    }
 }
 
 void MP_Handler::handleServicePositionChanged(qint64 pos)
 {
     m_position = pos;
-    emit positionChanged();
+    emit currentPositionChanged();
 }
 
 void MP_Handler::handleServiceDurationChanged(qint64 dur)
@@ -380,8 +467,9 @@ void MP_Handler::handleMediaFilesChanged(const QStringList &files)
 {
     m_mediaFiles = files;
     m_currentTrackIndex = -1;
-    emit mediaFilesChanged();
-    emit currentTrackIndexChanged();
+    emit mediaFileListChanged();
+    emit currentMediaIndexChanged();
+    buildPlaylist();
     qDebug() << "Media files updated:" << files.count() << "files";
 }
 
@@ -411,7 +499,7 @@ void MP_Handler::pollPosition()
         QDBusReply<qint64> reply = m_serviceInterface->call("GetPosition");
         if (reply.isValid()) {
             m_position = reply.value();
-            emit positionChanged();
+            emit currentPositionChanged();
         }
     }
 }

@@ -3,135 +3,176 @@ import QtQuick.Controls
 
 Item {
     id: root
-    width: 350
-    height: 80
-
-    property bool isPlaying: false
-    property color accentColor: "#3b82f6"
-    property color secondaryColor: "#334155"
-
-    signal playClicked()
-    signal pauseClicked()
-    signal stopClicked()
-    signal previousClicked()
-    signal nextClicked()
 
     Row {
-        anchors.centerIn: parent
+        id: controlsRow
         spacing: 15
+        anchors.centerIn: parent
+
+        // Shuffle button
+        Button {
+            width: 80
+            height: 80
+
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return "#1e293b"
+                }
+                radius: 25
+                border.width: 1
+                border.color: theme.accentColor
+
+                Behavior on color { ColorAnimation { duration: 200 } }
+            }
+
+            contentItem: Text {
+                text: "🔀"
+                font.pixelSize: 20
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.toggleShuffle()
+            }
+        }
 
         // Previous button
-        Rectangle {
-            width: 55
-            height: 55
-            radius: 27.5
-            color: prevButton.pressed ? Qt.darker(secondaryColor, 1.3) :
-                   prevButton.containsMouse ? Qt.lighter(secondaryColor, 1.2) : secondaryColor
-            border.color: prevButton.containsMouse ? accentColor : "transparent"
-            border.width: 2
+        Button {
+            width: 80
+            height: 80
 
-            Behavior on color { ColorAnimation { duration: 150 } }
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return theme.themeColor
+                }
+                radius: 30
+                border.width: 2
+                border.color: theme.accentColor
 
-            MouseArea {
-                id: prevButton
-                anchors.fill: parent
-                hoverEnabled: true
-                onClicked: root.previousClicked()
+                Behavior on color { ColorAnimation { duration: 200 } }
             }
 
-            Text {
-                anchors.centerIn: parent
+            contentItem: Text {
                 text: "⏮"
+                font.pixelSize: 24
                 color: "white"
-                font.pixelSize: 22
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.previous()
             }
         }
 
-        // Stop button
-        Rectangle {
-            width: 55
-            height: 55
-            radius: 27.5
-            color: stopButton.pressed ? Qt.darker(secondaryColor, 1.3) :
-                   stopButton.containsMouse ? Qt.lighter(secondaryColor, 1.2) : secondaryColor
-            border.color: stopButton.containsMouse ? accentColor : "transparent"
-            border.width: 2
+        // Play/Pause button (larger, centered)
+        Button {
+            width: 80
+            height: 80
 
-            Behavior on color { ColorAnimation { duration: 150 } }
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return theme.themeColor
+                }
+                radius: 40
+                border.width: 3
+                border.color: theme.accentColor
 
-            MouseArea {
-                id: stopButton
-                anchors.fill: parent
-                hoverEnabled: true
-                onClicked: root.stopClicked()
-            }
+                Behavior on color { ColorAnimation { duration: 200 } }
 
-            Text {
-                anchors.centerIn: parent
-                text: "⏹"
-                color: "white"
-                font.pixelSize: 22
-            }
-        }
-
-        // Play/Pause button (larger)
-        Rectangle {
-            width: 70
-            height: 70
-            radius: 35
-            color: playButton.pressed ? Qt.darker(accentColor, 1.2) :
-                   playButton.containsMouse ? Qt.lighter(accentColor, 1.1) : accentColor
-
-            Behavior on color { ColorAnimation { duration: 150 } }
-            Behavior on scale { NumberAnimation { duration: 100 } }
-
-            scale: playButton.pressed ? 0.95 : 1.0
-
-            MouseArea {
-                id: playButton
-                anchors.fill: parent
-                hoverEnabled: true
-                onClicked: {
-                    if (root.isPlaying) {
-                        root.pauseClicked()
-                    } else {
-                        root.playClicked()
-                    }
+                // Glow effect
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width + 10
+                    height: parent.height + 10
+                    radius: (parent.width + 10) / 2
+                    color: "transparent"
+                    border.width: 2
+                    border.color: theme.themeColor
+                    opacity: 0.3
                 }
             }
 
-            Text {
-                anchors.centerIn: parent
-                text: root.isPlaying ? "⏸" : "▶"
+            contentItem: Text {
+                text: mpHandler.isPlaying ? "⏸" : "▶"
+                font.pixelSize: 32
                 color: "white"
-                font.pixelSize: 28
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.togglePlayPause()
             }
         }
 
         // Next button
-        Rectangle {
-            width: 55
-            height: 55
-            radius: 27.5
-            color: nextButton.pressed ? Qt.darker(secondaryColor, 1.3) :
-                   nextButton.containsMouse ? Qt.lighter(secondaryColor, 1.2) : secondaryColor
-            border.color: nextButton.containsMouse ? accentColor : "transparent"
-            border.width: 2
+        Button {
+            width: 80
+            height: 80
 
-            Behavior on color { ColorAnimation { duration: 150 } }
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return theme.themeColor
+                }
+                radius: 30
+                border.width: 2
+                border.color: theme.accentColor
 
-            MouseArea {
-                id: nextButton
-                anchors.fill: parent
-                hoverEnabled: true
-                onClicked: root.nextClicked()
+                Behavior on color { ColorAnimation { duration: 200 } }
             }
 
-            Text {
-                anchors.centerIn: parent
+            contentItem: Text {
                 text: "⏭"
+                font.pixelSize: 24
                 color: "white"
-                font.pixelSize: 22
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.next()
+            }
+        }
+
+        // Repeat button
+        Button {
+            width: 80
+            height: 80
+
+            background: Rectangle {
+                color: {
+                    if (parent.pressed) return theme.buttonPressedColor
+                    if (parent.hovered) return theme.buttonHoverColor
+                    return "#1e293b"
+                }
+                radius: 25
+                border.width: 1
+                border.color: theme.accentColor
+
+                Behavior on color { ColorAnimation { duration: 200 } }
+            }
+
+            contentItem: Text {
+                text: "🔁"
+                font.pixelSize: 20
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            onClicked: {
+                mpHandler.toggleRepeat()
             }
         }
     }

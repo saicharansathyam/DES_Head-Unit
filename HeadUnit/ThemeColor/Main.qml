@@ -5,7 +5,7 @@ import QtQuick.Controls
 ApplicationWindow {
     visible: true
     width: 824
-    height: 550
+    height: 470  // Match compositor app height
     title: "Theme Color Selector"
 
     Rectangle {
@@ -33,8 +33,8 @@ ApplicationWindow {
                 height: 400
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                // Fixed: Use function with formal parameter
                 onColorSelected: function(selectedColor) {
+                    console.log("Color selected from wheel:", selectedColor)
                     previewButton.updatePreviewColor(selectedColor)
                 }
             }
@@ -45,10 +45,11 @@ ApplicationWindow {
                 width: 150
                 height: 150
                 anchors.horizontalCenter: parent.horizontalCenter
-                currentColor: ThemeColorClient.color
+                currentColor: themeClient.color  // Fixed: lowercase themeClient
 
                 onColorConfirmed: function(confirmedColor) {
-                    ThemeColorClient.setColor(confirmedColor)
+                    console.log("Color confirmed, sending to D-Bus:", confirmedColor)
+                    themeClient.setColor(confirmedColor)  // Fixed: lowercase themeClient
                 }
             }
         }
@@ -56,9 +57,15 @@ ApplicationWindow {
 
     // Listen for external color changes from DBus
     Connections {
-        target: ThemeColorClient
+        target: themeClient  // Fixed: lowercase themeClient
         function onColorChanged() {
+            console.log("Color changed from D-Bus:", themeClient.color)
             previewButton.resetToCurrentColor()
         }
+    }
+
+    Component.onCompleted: {
+        console.log("ThemeColor app started")
+        console.log("Initial color:", themeClient.color)
     }
 }

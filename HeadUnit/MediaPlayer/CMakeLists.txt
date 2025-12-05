@@ -23,6 +23,8 @@ add_executable(MediaPlayer
     main.cpp
     mp_handler.cpp
     mp_handler.h
+    ../theme_client.cpp
+    ../theme_client.h
     resources.qrc
 )
 

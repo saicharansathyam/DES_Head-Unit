@@ -2,98 +2,54 @@ import QtQuick
 import QtQuick.Controls
 
 Rectangle {
-    id: menu
-    color: "#1f1f1f"
+    id: settingsMenu
+    color: "#020617"
 
-    property string currentContext: "wifi"
+    signal menuItemClicked(string item)
 
-    signal contextSelected(string context)
+    property string currentPage: "WiFiSettings"
 
     Column {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 5
+        anchors.topMargin: 20
+        spacing: 4
 
-        // Header
         Text {
-            text: "SETTINGS"
-            color: "#00ff00"
-            font.pixelSize: 18
+            text: "Settings"
+            font.pixelSize: 24
             font.bold: true
-            width: parent.width
-            horizontalAlignment: Text.AlignHCenter
-        }
-
-        Rectangle {
-            width: parent.width
-            height: 2
-            color: "#404040"
-        }
-
-        // Menu items
-        MenuButton {
-            text: "WiFi"
-            icon: "📶"
-            isActive: currentContext === "wifi"
-            onClicked: contextSelected("wifi")
+            color: theme.themeColor
+            anchors.horizontalCenter: parent.horizontalCenter
         }
 
         MenuButton {
-            text: "Bluetooth"
-            icon: "🔵"
-            isActive: currentContext === "bluetooth"
-            onClicked: contextSelected("bluetooth")
+            textLabel: "Wi-Fi"
+            iconText: "📶"
+            selected: settingsMenu.currentPage === "WiFiSettings"
+            onClicked: {
+                settingsMenu.currentPage = "WiFiSettings"
+                settingsMenu.menuItemClicked("WiFiSettings")
+            }
         }
 
         MenuButton {
-            text: "Sound"
-            icon: "🔊"
-            isActive: currentContext === "sound"
-            onClicked: contextSelected("sound")
+            textLabel: "Bluetooth"
+            iconText: "📡"
+            selected: settingsMenu.currentPage === "BluetoothSettings"
+            onClicked: {
+                settingsMenu.currentPage = "BluetoothSettings"
+                settingsMenu.menuItemClicked("BluetoothSettings")
+            }
         }
 
-        Item {
-            width: parent.width
-            height: 20
-        }
-
-        // Status info
-        Rectangle {
-            width: parent.width
-            height: 100
-            color: "#2a2a2a"
-            radius: 5
-
-            Column {
-                anchors.centerIn: parent
-                spacing: 5
-
-                Text {
-                    text: "Status"
-                    color: "#00ff00"
-                    font.pixelSize: 12
-                    font.bold: true
-                }
-
-                Text {
-                    text: wifiManager.isConnected ? "WiFi: Connected" : "WiFi: Disconnected"
-                    color: wifiManager.isConnected ? "#00ff00" : "#ff6600"
-                    font.pixelSize: 10
-                }
-
-                Text {
-                    text: bluetoothManager.isEnabled ? "BT: Enabled" : "BT: Disabled"
-                    color: bluetoothManager.isEnabled ? "#00ff00" : "#ff6600"
-                    font.pixelSize: 10
-                }
-
-                Text {
-                    text: "Vol: " + settingsManager.systemVolume + "%"
-                    color: "#ffffff"
-                    font.pixelSize: 10
-                }
+        MenuButton {
+            textLabel: "Date & Time"
+            iconText: "🕐"
+            selected: settingsMenu.currentPage === "TimeSettings"
+            onClicked: {
+                settingsMenu.currentPage = "TimeSettings"
+                settingsMenu.menuItemClicked("TimeSettings")
             }
         }
     }
 }
-

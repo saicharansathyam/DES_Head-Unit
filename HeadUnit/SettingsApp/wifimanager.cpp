@@ -338,22 +338,98 @@ void WiFiManager::refreshStatus()
 
 void WiFiManager::updateConnectionState()
 {
-    // Get current connection status from NetworkManager
-    if (m_nmInterface && m_nmInterface->isValid()) {
-        QVariant state = m_nmInterface->property("State");
-        m_isConnected = (state.toUInt() == 70); // 70 = NM_STATE_CONNECTED_GLOBAL
-
-        if (m_isConnected) {
-            // Get active connection SSID
-            // Simplified - full implementation would query active connection details
-            m_currentNetwork = "Connected Network";
-        } else {
-            m_currentNetwork = "Not Connected";
-        }
-
+    if (!m_nmInterface || !m_nmInterface->isValid()) {
+        qWarning() << "WiFiManager: NM interface not valid in updateConnectionState()";
+        m_isConnected = false;
+        m_currentNetwork = "Not Connected";
         emit isConnectedChanged();
         emit currentNetworkChanged();
+        return;
     }
+
+    // 1) Check NM state to know if we are connected at all
+    QVariant nmStateVar = m_nmInterface->property("State");
+    const uint nmState = nmStateVar.toUInt();
+    // 70 = NM_STATE_CONNECTED_GLOBAL, 50 = CONNECTED_SITE, etc.
+    const bool connected = (nmState == 70 || nmState == 60 || nmState == 50);
+
+    m_isConnected = connected;
+
+    if (!connected) {
+        m_currentNetwork = "Not Connected";
+        qDebug() << "WiFiManager: Not connected to any WiFi network";
+        emit isConnectedChanged();
+        emit currentNetworkChanged();
+        return;
+    }
+
+    // 2) Ask NM for all devices
+    QDBusReply<QList<QDBusObjectPath>> devReply =
+        m_nmInterface->call("GetDevices");
+
+    QString ssidText = "Unknown";
+
+    if (!devReply.isValid()) {
+        qWarning() << "WiFiManager: GetDevices failed:"
+                   << devReply.error().message();
+    } else {
+        const auto devices = devReply.value();
+
+        for (const QDBusObjectPath &devPath : devices) {
+            QDBusInterface devIface(
+                "org.freedesktop.NetworkManager",
+                devPath.path(),
+                "org.freedesktop.NetworkManager.Device",
+                m_systemBus
+                );
+            if (!devIface.isValid())
+                continue;
+
+            // Check device type (2 = NM_DEVICE_TYPE_WIFI)
+            uint devType = devIface.property("DeviceType").toUInt();
+            if (devType != 2)
+                continue; // not WiFi
+
+            // For WiFi devices, we can also use the WiFi-specific interface
+            QDBusInterface wifiDevIface(
+                "org.freedesktop.NetworkManager",
+                devPath.path(),
+                "org.freedesktop.NetworkManager.Device.Wireless",
+                m_systemBus
+                );
+            if (!wifiDevIface.isValid())
+                continue;
+
+            // ActiveAccessPoint is an object path to the current AP
+            QDBusObjectPath apPath =
+                wifiDevIface.property("ActiveAccessPoint").value<QDBusObjectPath>();
+
+            if (apPath.path() == "/" || apPath.path().isEmpty())
+                continue;
+
+            QDBusInterface apIface(
+                "org.freedesktop.NetworkManager",
+                apPath.path(),
+                "org.freedesktop.NetworkManager.AccessPoint",
+                m_systemBus
+                );
+            if (!apIface.isValid())
+                continue;
+
+            // 3) Read the SSID from the AP
+            QByteArray ssidBytes = apIface.property("Ssid").toByteArray();
+            if (!ssidBytes.isEmpty()) {
+                ssidText = QString::fromUtf8(ssidBytes);
+                break;  // we found a WiFi AP; stop here
+            }
+        }
+    }
+
+    m_currentNetwork = ssidText;
+    qDebug() << "WiFiManager: Connected SSID:" << m_currentNetwork;
+
+    emit isConnectedChanged();
+    emit currentNetworkChanged();
 }
 
 void WiFiManager::handleConnectionStateChanged()

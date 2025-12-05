@@ -1,287 +1,498 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 
 Rectangle {
-    id: wifiSettings
-    color: "transparent"
+    id: root
+    color: "#0f172a"
 
-    Column {
+    Component.onCompleted: {
+        // Get current WiFi status on load
+        updateCurrentWiFi()
+    }
+
+    function updateCurrentWiFi() {
+        currentWiFiText.text = dbusHandler.getCurrentWiFi()
+    }
+
+    Connections {
+        target: dbusHandler
+
+        function onWifiNetworksFound(networks) {
+            // Parse network data: "SSID:SIGNAL:SECURITY"
+            wifiListModel.clear()
+            for (var i = 0; i < networks.length; i++) {
+                var parts = networks[i].split(':')
+                if (parts.length >= 3) {
+                    wifiListModel.append({
+                        "ssid": parts[0],
+                        "signal": parseInt(parts[1]) || 0,
+                        "security": parts[2],
+                        "connected": false
+                    })
+                }
+            }
+            scanButton.text = "Scan for Networks"
+            scanButton.enabled = true
+        }
+
+        function onWifiConnected(ssid) {
+            statusText.text = "✓ Connected to " + ssid
+            statusText.color = theme.themeColor
+            statusText.visible = true
+            statusTimer.restart()
+            updateCurrentWiFi()
+        }
+
+        function onWifiDisconnected() {
+            statusText.text = "Disconnected from WiFi"
+            statusText.color = "#94a3b8"
+            statusText.visible = true
+            statusTimer.restart()
+            updateCurrentWiFi()
+        }
+    }
+
+    Flickable {
         anchors.fill: parent
-        spacing: 15
+        anchors.margins: 20
+        contentHeight: contentColumn.height
+        clip: true
 
-        // Header
-        Row {
+        Column {
+            id: contentColumn
             width: parent.width
-            height: 40
-            spacing: 10
+            spacing: 16
 
+            // Header
             Text {
-                text: "WiFi Settings"
-                color: "#00ff00"
-                font.pixelSize: 24
+                text: "Wi-Fi"
+                font.pixelSize: 22
                 font.bold: true
-                anchors.verticalCenter: parent.verticalCenter
+                color: theme.themeColor
+                Behavior on color { ColorAnimation { duration: 200 } }
             }
 
-            Item {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 1
+            // Status Card
+            Rectangle {
+                width: parent.width
+                height: 80
+                radius: 12
+                color: "#020617"
+                border.color: theme.accentColor
+                border.width: 2
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    Row {
+                        spacing: 8
+                        anchors.horizontalCenter: parent.horizontalCenter
+
+                        Text {
+                            text: "📶"
+                            font.pixelSize: 24
+                        }
+
+                        Text {
+                            id: currentWiFiText
+                            text: "Not Connected"
+                            font.pixelSize: 16
+                            font.bold: true
+                            color: theme.themeColor
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    Button {
+                        text: "Disconnect"
+                        width: 120
+                        height: 30
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: currentWiFiText.text !== "Not Connected"
+
+                        background: Rectangle {
+                            color: parent.pressed ? "#7f1d1d" : "#991b1b"
+                            radius: 6
+                            border.color: "#dc2626"
+                            border.width: 1
+                        }
+
+                        contentItem: Text {
+                            text: parent.text
+                            font.pixelSize: 12
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        onClicked: {
+                            dbusHandler.disconnectWiFi()
+                            currentWiFiText.text = "Not Connected"
+                        }
+                    }
+                }
             }
 
+            // Status Message
+            Text {
+                id: statusText
+                text: ""
+                font.pixelSize: 13
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: false
+
+                Timer {
+                    id: statusTimer
+                    interval: 4000
+                    onTriggered: statusText.visible = false
+                }
+            }
+
+            // Scan Button
             Button {
-                text: "Scan"
-                width: 100
-                height: 35
-                anchors.verticalCenter: parent.verticalCenter
+                id: scanButton
+                text: "Scan for Networks"
+                width: parent.width * 0.6
+                height: 44
+                anchors.horizontalCenter: parent.horizontalCenter
 
                 background: Rectangle {
-                    color: parent.pressed ? "#505050" : "#404040"
-                    radius: 5
+                    color: {
+                        if (!scanButton.enabled) return "#334155"
+                        return scanButton.pressed ? theme.buttonPressedColor : theme.themeColor
+                    }
+                    radius: 10
+                    border.color: theme.accentColor
+                    border.width: 2
+                    Behavior on color { ColorAnimation { duration: 200 } }
                 }
 
                 contentItem: Text {
-                    text: parent.text
-                    color: "#ffffff"
+                    text: scanButton.text
+                    font.pixelSize: 15
+                    font.bold: true
+                    color: scanButton.enabled ? "white" : "#64748b"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
 
-                onClicked: wifiManager.scanNetworks()
-            }
-        }
-
-        // Current connection
-        Rectangle {
-            width: parent.width
-            height: 80
-            color: "#2a2a2a"
-            radius: 8
-
-            Column {
-                anchors.centerIn: parent
-                spacing: 5
-
-                Text {
-                    text: "Current Connection"
-                    color: "#888888"
-                    font.pixelSize: 12
-                }
-
-                Text {
-                    text: wifiManager.currentNetwork
-                    color: wifiManager.isConnected ? "#00ff00" : "#ff6600"
-                    font.pixelSize: 16
-                    font.bold: true
-                }
-
-                Button {
-                    text: "Disconnect"
-                    enabled: wifiManager.isConnected
-                    anchors.horizontalCenter: parent.horizontalCenter
-
-                    background: Rectangle {
-                        color: parent.enabled ? (parent.pressed ? "#803030" : "#ff4444") : "#404040"
-                        radius: 4
-                    }
-
-                    contentItem: Text {
-                        text: parent.text
-                        color: parent.enabled ? "#ffffff" : "#808080"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        font.pixelSize: 11
-                    }
-
-                    onClicked: wifiManager.disconnectNetwork()
+                onClicked: {
+                    wifiListModel.clear()
+                    scanButton.text = "Scanning..."
+                    scanButton.enabled = false
+                    dbusHandler.scanWiFi()
                 }
             }
-        }
 
-        // Available networks
-        Text {
-            text: "Available Networks"
-            color: "#ffffff"
-            font.pixelSize: 16
-            font.bold: true
-        }
+            // Networks List Header
+            Text {
+                text: "Available Networks"
+                font.pixelSize: 16
+                font.bold: true
+                color: theme.accentColor
+                visible: wifiListView.count > 0
+            }
 
-        Rectangle {
-            width: parent.width
-            height: 350
-            color: "#2a2a2a"
-            radius: 8
-
+            // Networks List
             ListView {
-                id: networkList
-                anchors.fill: parent
-                anchors.margins: 10
-                spacing: 5
+                id: wifiListView
+                width: parent.width
+                height: Math.min(contentHeight, 280)
                 clip: true
+                spacing: 8
 
-                model: wifiManager.availableNetworks
+                model: ListModel {
+                    id: wifiListModel
+                }
 
                 delegate: Rectangle {
-                    width: networkList.width
+                    width: wifiListView.width
                     height: 60
-                    color: "#1a1a1a"
-                    radius: 5
+                    radius: 10
+                    color: mouseArea.pressed ? theme.buttonPressedColor : "#020617"
+                    border.color: theme.accentColor
+                    border.width: 1
+
+                    Behavior on color { ColorAnimation { duration: 150 } }
 
                     Row {
                         anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 15
+                        anchors.margins: 12
+                        spacing: 12
 
-                        // Signal strength
+                        // Signal Strength Icon
                         Text {
-                            text: modelData.secured ? "🔒" : "📶"
-                            font.pixelSize: 20
+                            text: {
+                                if (model.signal >= 75) return "📶"
+                                if (model.signal >= 50) return "📶"
+                                if (model.signal >= 25) return "📡"
+                                return "📶"
+                            }
+                            font.pixelSize: 24
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
-                        // Network info
+                        // Network Info
                         Column {
+                            width: parent.width - 100
                             anchors.verticalCenter: parent.verticalCenter
-                            spacing: 3
+                            spacing: 4
 
                             Text {
-                                text: modelData.ssid
-                                color: "#ffffff"
-                                font.pixelSize: 14
+                                text: model.ssid
+                                font.pixelSize: 15
                                 font.bold: true
+                                color: "#e5e7eb"
+                                elide: Text.ElideRight
+                                width: parent.width
                             }
 
-                            Text {
-                                text: "Signal: " + modelData.strength + "%"
-                                color: "#888888"
-                                font.pixelSize: 11
+                            Row {
+                                spacing: 10
+
+                                Text {
+                                    text: model.security === "" || model.security === "none" ? "Open" : "🔒 Secured"
+                                    font.pixelSize: 12
+                                    color: "#94a3b8"
+                                }
+
+                                Text {
+                                    text: "Signal: " + model.signal + "%"
+                                    font.pixelSize: 12
+                                    color: theme.accentColor
+                                }
                             }
                         }
 
-                        Item { width: parent.width - 200 }
-
-                        // Connect button
-                        Button {
-                            text: "Connect"
-                            width: 80
-                            height: 35
+                        // Connect Icon
+                        Text {
+                            text: "→"
+                            font.pixelSize: 20
+                            color: theme.themeColor
                             anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
 
-                            background: Rectangle {
-                                color: parent.pressed ? "#305030" : "#00aa00"
-                                radius: 4
-                            }
+                    MouseArea {
+                        id: mouseArea
+                        anchors.fill: parent
+                        onClicked: {
+                            selectedSSID = model.ssid
+                            selectedSecurity = model.security
 
-                            contentItem: Text {
-                                text: parent.text
-                                color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                font.pixelSize: 11
-                            }
-
-                            onClicked: {
-                                // Show password dialog if secured
-                                if (modelData.secured) {
-                                    passwordDialog.ssid = modelData.ssid
-                                    passwordDialog.open()
-                                } else {
-                                    wifiManager.connectToNetwork(modelData.ssid, "")
-                                }
+                            if (model.security === "" || model.security === "none") {
+                                // Open network - connect directly
+                                dbusHandler.connectToWiFi(model.ssid, "")
+                                statusText.text = "Connecting to " + model.ssid + "..."
+                                statusText.color = "#94a3b8"
+                                statusText.visible = true
+                            } else {
+                                // Secured network - show password dialog
+                                wifiPasswordDialog.open()
                             }
                         }
                     }
                 }
+
+                ScrollBar.vertical: ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                    width: 8
+
+                    contentItem: Rectangle {
+                        radius: 4
+                        color: theme.accentColor
+                        opacity: parent.pressed ? 0.8 : 0.5
+                    }
+                }
             }
 
-            Text {
-                anchors.centerIn: parent
-                text: "No networks found\nClick 'Scan' to search"
-                color: "#666666"
-                font.pixelSize: 14
-                horizontalAlignment: Text.AlignHCenter
-                visible: networkList.count === 0
+            // Empty State
+            Item {
+                width: parent.width
+                height: 100
+                visible: wifiListView.count === 0
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    Text {
+                        text: "📡"
+                        font.pixelSize: 32
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        opacity: 0.5
+                    }
+
+                    Text {
+                        text: "No networks found"
+                        font.pixelSize: 14
+                        color: "#64748b"
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+
+                    Text {
+                        text: "Tap 'Scan for Networks' to search"
+                        font.pixelSize: 12
+                        color: "#475569"
+                        anchors.horizontalCenter: parent.horizontalCenter
+                    }
+                }
             }
         }
     }
 
-    // Password dialog
-    Dialog {
-        id: passwordDialog
-        anchors.centerIn: parent
-        width: 400
-        height: 200
+    // Password Dialog
+    Popup {
+        id: wifiPasswordDialog
         modal: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        anchors.centerIn: parent
+        width: 360
+        height: 240
 
-        property string ssid: ""
-
-        title: "Enter Password for " + ssid
+        property string selectedSSID: ""
+        property string selectedSecurity: ""
 
         background: Rectangle {
-            color: "#2a2a2a"
-            border.color: "#404040"
+            color: "#1e293b"
+            radius: 12
+            border.color: theme.accentColor
             border.width: 2
-            radius: 8
         }
 
-        contentItem: Column {
-            spacing: 15
-            padding: 20
+        Column {
+            anchors.fill: parent
+            anchors.margins: 24
+            spacing: 18
+
+            Text {
+                text: "Connect to Wi-Fi"
+                font.pixelSize: 18
+                font.bold: true
+                color: theme.themeColor
+            }
+
+            Text {
+                text: selectedSSID
+                font.pixelSize: 15
+                color: "#e5e7eb"
+                elide: Text.ElideRight
+                width: parent.width
+            }
 
             TextField {
-                id: passwordField
-                width: parent.width - 40
-                placeholderText: "Password"
-                echoMode: TextInput.Password
+                id: passwordInput
+                width: parent.width
+                height: 44
+                placeholderText: "Enter password"
+                echoMode: showPasswordCheckbox.checked ? TextInput.Normal : TextInput.Password
+                font.pixelSize: 14
 
                 background: Rectangle {
-                    color: "#1a1a1a"
-                    border.color: "#404040"
-                    radius: 4
+                    color: "#0f172a"
+                    radius: 8
+                    border.color: passwordInput.activeFocus ? theme.accentColor : "#334155"
+                    border.width: 2
                 }
 
-                color: "#ffffff"
+                color: "white"
+                leftPadding: 12
+                rightPadding: 12
+            }
+
+            CheckBox {
+                id: showPasswordCheckbox
+                text: "Show password"
+
+                contentItem: Text {
+                    text: showPasswordCheckbox.text
+                    font.pixelSize: 12
+                    color: "#94a3b8"
+                    leftPadding: showPasswordCheckbox.indicator.width + 8
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                indicator: Rectangle {
+                    width: 18
+                    height: 18
+                    radius: 4
+                    border.color: theme.accentColor
+                    border.width: 2
+                    color: showPasswordCheckbox.checked ? theme.themeColor : "transparent"
+
+                    Text {
+                        text: "✓"
+                        font.pixelSize: 12
+                        color: "white"
+                        anchors.centerIn: parent
+                        visible: showPasswordCheckbox.checked
+                    }
+                }
             }
 
             Row {
-                spacing: 10
+                spacing: 12
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 Button {
                     text: "Cancel"
-                    onClicked: passwordDialog.close()
+                    width: 120
+                    height: 40
 
                     background: Rectangle {
-                        color: parent.pressed ? "#505050" : "#404040"
-                        radius: 4
+                        color: parent.pressed ? "#1e293b" : "#0f172a"
+                        radius: 8
+                        border.color: "#334155"
+                        border.width: 2
                     }
 
                     contentItem: Text {
                         text: parent.text
-                        color: "#ffffff"
+                        font.pixelSize: 14
+                        color: "#94a3b8"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        wifiPasswordDialog.close()
+                        passwordInput.text = ""
                     }
                 }
 
                 Button {
                     text: "Connect"
-                    onClicked: {
-                        wifiManager.connectToNetwork(passwordDialog.ssid, passwordField.text)
-                        passwordDialog.close()
-                        passwordField.text = ""
-                    }
+                    width: 120
+                    height: 40
+                    enabled: passwordInput.text.length > 0
 
                     background: Rectangle {
-                        color: parent.pressed ? "#305030" : "#00aa00"
-                        radius: 4
+                        color: {
+                            if (!parent.enabled) return "#334155"
+                            return parent.pressed ? theme.buttonPressedColor : theme.themeColor
+                        }
+                        radius: 8
+                        border.color: parent.enabled ? theme.accentColor : "#475569"
+                        border.width: 2
                     }
 
                     contentItem: Text {
                         text: parent.text
-                        color: "#ffffff"
+                        font.pixelSize: 14
+                        font.bold: true
+                        color: parent.enabled ? "white" : "#64748b"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
+                    }
+
+                    onClicked: {
+                        wifiPasswordDialog.close()
+                        dbusHandler.connectToWiFi(selectedSSID, passwordInput.text)
+                        statusText.text = "Connecting to " + selectedSSID + "..."
+                        statusText.color = "#94a3b8"
+                        statusText.visible = true
+                        passwordInput.text = ""
                     }
                 }
             }

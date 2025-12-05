@@ -5,10 +5,14 @@
 #include <QDir>
 #include <QDebug>
 #include "dbus_manager.h"
+#include "../theme_client.h"
 
 int main(int argc, char *argv[])
 {
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
+
+    // Enable virtual keyboard for the compositor
+    qputenv("QT_IM_MODULE", QByteArray("qtvirtualkeyboard"));
 
     QGuiApplication app(argc, argv);
     app.setOrganizationName("HeadUnit");
@@ -18,10 +22,13 @@ int main(int argc, char *argv[])
     // Create D-Bus manager (replaces ScriptExecutor)
     DBusManager dbusManager;
 
+    ThemeClient themeClient;
+
     QQmlApplicationEngine engine;
 
     // Expose D-Bus manager to QML
     engine.rootContext()->setContextProperty("dbusManager", &dbusManager);
+    engine.rootContext()->setContextProperty("theme", &themeClient);
 
     qDebug() << "=== Starting HeadUnit Compositor ===";
     qDebug() << "Platform:" << QGuiApplication::platformName();

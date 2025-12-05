@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+
 """
-MediaPlayer DBus Service with USB Monitoring
-Handles media playback and USB device detection for HeadUnit MediaPlayer
+MediaPlayer DBus Service with USB Monitoring and Bluetooth Support
+Handles media playback, USB device hot-swapping, and Bluetooth audio
 """
 
 import sys
@@ -51,6 +52,7 @@ class USBMonitor:
         self.context = None
         self.monitor = None
         self.observer = None
+        self.mounted_devices = {}  # Track device_node -> mount_point mapping
         
         if HAS_PYUDEV:
             self._start_monitoring()
@@ -63,7 +65,6 @@ class USBMonitor:
             self.context = pyudev.Context()
             self.monitor = pyudev.Monitor.from_netlink(self.context)
             self.monitor.filter_by(subsystem='block', device_type='partition')
-            
             self.observer = pyudev.MonitorObserver(
                 self.monitor,
                 callback=self._device_event
@@ -78,24 +79,41 @@ class USBMonitor:
         try:
             # Check if it's a removable device
             if device.get('ID_BUS') == 'usb' or 'usb' in device.device_path.lower():
-                mount_point = self._get_mount_point(device)
+                device_node = device.device_node
                 
-                if action == 'add' and mount_point:
-                    print(f"USB device added: {mount_point}")
-                    GLib.idle_add(self.callback_inserted, mount_point)
+                if action == 'add':
+                    # Wait a bit for device to mount
+                    GLib.timeout_add(1000, self._check_device_mounted, device_node)
+                    
                 elif action == 'remove':
-                    print(f"USB device removed: {device.device_node}")
+                    print(f"USB device removed: {device_node}")
+                    # Get mount point from our tracking dict
+                    mount_point = self.mounted_devices.get(device_node)
                     if mount_point:
                         GLib.idle_add(self.callback_removed, mount_point)
+                        del self.mounted_devices[device_node]
+                    else:
+                        # Try to get from all mounted devices
+                        for tracked_node, tracked_mount in list(self.mounted_devices.items()):
+                            if tracked_node == device_node:
+                                GLib.idle_add(self.callback_removed, tracked_mount)
+                                del self.mounted_devices[tracked_node]
+                                break
+                        
         except Exception as e:
             print(f"Error handling USB event: {e}")
     
-    def _get_mount_point(self, device):
-        """Get mount point for a device"""
-        # Check common mount locations
-        device_node = device.device_node
-        
-        # Read /proc/mounts to find mount point
+    def _check_device_mounted(self, device_node):
+        """Check if device is mounted and trigger callback"""
+        mount_point = self._get_mount_point_by_device(device_node)
+        if mount_point:
+            print(f"USB device mounted: {device_node} at {mount_point}")
+            self.mounted_devices[device_node] = mount_point
+            GLib.idle_add(self.callback_inserted, mount_point)
+        return False  # Don't repeat
+    
+    def _get_mount_point_by_device(self, device_node):
+        """Get mount point for a specific device node"""
         try:
             with open('/proc/mounts', 'r') as f:
                 for line in f:
@@ -104,55 +122,38 @@ class USBMonitor:
                         return parts[1]
         except:
             pass
-        
         return None
     
     def get_mounted_usb_devices(self):
         """Get list of currently mounted USB devices"""
         devices = []
         
-        # Check common USB mount locations
-        common_paths = [
-            '/media',
-            '/mnt',
-            '/run/media'
-        ]
+        # Read /proc/mounts and update our tracking
+        self.mounted_devices.clear()
         
-        for base_path in common_paths:
-            if os.path.exists(base_path):
-                try:
-                    for entry in os.listdir(base_path):
-                        full_path = os.path.join(base_path, entry)
-                        if os.path.ismount(full_path):
-                            # Check if it's a removable device
-                            if self._is_usb_device(full_path):
-                                devices.append(full_path)
-                        elif os.path.isdir(full_path):
-                            # Check subdirectories (e.g., /media/username/device)
-                            for sub_entry in os.listdir(full_path):
-                                sub_path = os.path.join(full_path, sub_entry)
-                                if os.path.ismount(sub_path) and self._is_usb_device(sub_path):
-                                    devices.append(sub_path)
-                except PermissionError:
-                    continue
+        try:
+            with open('/proc/mounts', 'r') as f:
+                for line in f:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        device_node = parts[0]
+                        mount_point = parts[1]
+                        
+                        # Check if it's a USB device
+                        if device_node.startswith('/dev/sd') or device_node.startswith('/dev/mmcblk'):
+                            # Check if mounted in typical user locations
+                            if any(mount_point.startswith(p) for p in ['/media/', '/mnt/', '/run/media/']):
+                                if os.path.exists(mount_point) and os.access(mount_point, os.R_OK):
+                                    devices.append(mount_point)
+                                    self.mounted_devices[device_node] = mount_point
+        except Exception as e:
+            print(f"Error reading mounts: {e}")
         
         return devices
-    
-    def _is_usb_device(self, mount_point):
-        """Check if a mount point is a USB device"""
-        # This is a simple heuristic - can be improved
-        try:
-            # Check if device has read/write access
-            test_file = os.path.join(mount_point, '.usb_test')
-            if os.access(mount_point, os.W_OK):
-                return True
-        except:
-            pass
-        return True  # Assume it's USB if mounted in common locations
 
 
 class MediaPlayerService(dbus.service.Object):
-    """DBus service for media playback with USB support"""
+    """DBus service for media playback with USB and Bluetooth support"""
     
     def __init__(self, bus, object_path):
         super().__init__(bus, object_path)
@@ -160,7 +161,6 @@ class MediaPlayerService(dbus.service.Object):
         self.source = ""
         self.source_type = "usb"
         self.state = "Stopped"
-        self.volume = 50
         self.position = 0
         self.duration = 0
         
@@ -170,11 +170,14 @@ class MediaPlayerService(dbus.service.Object):
         self.media_files = []
         self.media_file_paths = []
         
+        # Bluetooth properties
+        self.bluetooth_devices = []
+        self.connected_bluetooth = ""
+        
         # Initialize VLC player
         if HAS_VLC:
             self.instance = vlc.Instance('--no-xlib')
             self.player = self.instance.media_player_new()
-            self.player.audio_set_volume(self.volume)
         else:
             self.instance = None
             self.player = None
@@ -206,12 +209,14 @@ class MediaPlayerService(dbus.service.Object):
             self.UsbDevicesChanged(dbus.Array(self.usb_devices, signature='s'))
             print(f"Found USB devices: {self.usb_devices}")
             
-            # Auto-select first device
+            # Auto-select first device if none selected
             if self.usb_devices and not self.current_device:
                 self._select_device(self.usb_devices[0])
     
     def _on_usb_inserted(self, device_path):
         """Handle USB device insertion"""
+        print(f"[HOT-SWAP] USB inserted: {device_path}")
+        
         if device_path not in self.usb_devices:
             self.usb_devices.append(device_path)
             self.UsbDevicesChanged(dbus.Array(self.usb_devices, signature='s'))
@@ -223,6 +228,8 @@ class MediaPlayerService(dbus.service.Object):
     
     def _on_usb_removed(self, device_path):
         """Handle USB device removal"""
+        print(f"[HOT-SWAP] USB removed: {device_path}")
+        
         if device_path in self.usb_devices:
             self.usb_devices.remove(device_path)
             self.UsbDevicesChanged(dbus.Array(self.usb_devices, signature='s'))
@@ -230,11 +237,26 @@ class MediaPlayerService(dbus.service.Object):
             
             # Clear if current device was removed
             if device_path == self.current_device:
+                print("[HOT-SWAP] Current device removed - stopping playback and clearing playlist")
+                
+                # Stop playback
+                if self.player and self.state != "Stopped":
+                    self.Stop()
+                
+                # Clear all USB-related data
                 self.current_device = ""
                 self.media_files = []
                 self.media_file_paths = []
+                self.source = ""
+                
+                # Notify clients
                 self.CurrentDeviceChanged("")
                 self.MediaFilesChanged(dbus.Array([], signature='s'))
+                
+                # Auto-select another device if available
+                if self.usb_devices:
+                    print(f"[HOT-SWAP] Auto-selecting alternative device: {self.usb_devices[0]}")
+                    self._select_device(self.usb_devices[0])
     
     def _select_device(self, device_path):
         """Select a USB device and scan for media"""
@@ -265,6 +287,7 @@ class MediaPlayerService(dbus.service.Object):
                         # Limit to 1000 files
                         if len(self.media_files) >= 1000:
                             break
+                
                 if len(self.media_files) >= 1000:
                     break
         except Exception as e:
@@ -272,6 +295,48 @@ class MediaPlayerService(dbus.service.Object):
         
         self.MediaFilesChanged(dbus.Array(self.media_files, signature='s'))
         print(f"Found {len(self.media_files)} media files")
+    
+    # ========== Bluetooth Methods ==========
+    
+    @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='as')
+    def GetBluetoothDevices(self):
+        """Get list of available Bluetooth audio devices"""
+        return dbus.Array(self.bluetooth_devices, signature='s')
+    
+    @dbus.service.method(INTERFACE_NAME, in_signature='s', out_signature='')
+    def SetBluetoothDevices(self, devices_json):
+        """Set Bluetooth devices list from Settings app"""
+        import json
+        try:
+            devices = json.loads(devices_json)
+            self.bluetooth_devices = [d.get('name', 'Unknown') for d in devices]
+            self.BluetoothDevicesChanged(dbus.Array(self.bluetooth_devices, signature='s'))
+            print(f"Bluetooth devices updated: {self.bluetooth_devices}")
+        except Exception as e:
+            print(f"Error parsing Bluetooth devices: {e}")
+    
+    @dbus.service.method(INTERFACE_NAME, in_signature='s', out_signature='')
+    def ConnectBluetoothDevice(self, device_name):
+        """Connect to Bluetooth audio device"""
+        self.connected_bluetooth = device_name
+        self.source_type = "bluetooth"
+        self.BluetoothDeviceConnected(device_name)
+        print(f"Connected to Bluetooth device: {device_name}")
+    
+    @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='')
+    def DisconnectBluetoothDevice(self):
+        """Disconnect current Bluetooth device"""
+        old_device = self.connected_bluetooth
+        self.connected_bluetooth = ""
+        self.BluetoothDeviceDisconnected(old_device)
+        print(f"Disconnected Bluetooth device: {old_device}")
+    
+    @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='s')
+    def GetConnectedBluetoothDevice(self):
+        """Get currently connected Bluetooth device"""
+        return self.connected_bluetooth
+    
+    # ========== USB Methods ==========
     
     @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='as')
     def GetUsbDevices(self):
@@ -309,6 +374,8 @@ class MediaPlayerService(dbus.service.Object):
         self._scan_usb_devices()
         print("Refreshed USB devices")
     
+    # ========== Playback Methods ==========
+    
     @dbus.service.method(INTERFACE_NAME, in_signature='ss', out_signature='')
     def SetSource(self, source, source_type):
         """Set media source"""
@@ -330,8 +397,13 @@ class MediaPlayerService(dbus.service.Object):
     @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='')
     def Play(self):
         """Start playback"""
-        if self.player and self.source_type == "usb":
-            self.player.play()
+        if self.player:
+            if self.source_type == "usb":
+                self.player.play()
+            elif self.source_type == "bluetooth":
+                # Bluetooth playback handled by BlueZ/PulseAudio
+                print("Bluetooth playback - controlled by system")
+            
             self.state = "Playing"
             self.PlaybackStateChanged(self.state)
             print("Playback started")
@@ -341,20 +413,22 @@ class MediaPlayerService(dbus.service.Object):
         """Pause playback"""
         if self.player:
             self.player.pause()
-            self.state = "Paused"
-            self.PlaybackStateChanged(self.state)
-            print("Playback paused")
+        
+        self.state = "Paused"
+        self.PlaybackStateChanged(self.state)
+        print("Playback paused")
     
     @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='')
     def Stop(self):
         """Stop playback"""
         if self.player:
             self.player.stop()
-            self.state = "Stopped"
-            self.position = 0
-            self.PlaybackStateChanged(self.state)
-            self.PositionChanged(dbus.Int64(self.position))
-            print("Playback stopped")
+        
+        self.state = "Stopped"
+        self.position = 0
+        self.PlaybackStateChanged(self.state)
+        self.PositionChanged(dbus.Int64(self.position))
+        print("Playback stopped")
     
     @dbus.service.method(INTERFACE_NAME, in_signature='x', out_signature='')
     def Seek(self, position):
@@ -365,13 +439,7 @@ class MediaPlayerService(dbus.service.Object):
             self.PositionChanged(dbus.Int64(self.position))
             print(f"Seeked to: {position}ms")
     
-    @dbus.service.method(INTERFACE_NAME, in_signature='i', out_signature='')
-    def SetVolume(self, volume):
-        """Set volume"""
-        self.volume = max(0, min(100, volume))
-        if self.player:
-            self.player.audio_set_volume(self.volume)
-        print(f"Volume: {self.volume}")
+
     
     @dbus.service.method(INTERFACE_NAME, in_signature='', out_signature='')
     def Next(self):
@@ -399,7 +467,8 @@ class MediaPlayerService(dbus.service.Object):
                 self.duration = dur
         return dbus.Int64(self.duration)
     
-    # Signals
+    # ========== Signals ==========
+    
     @dbus.service.signal(INTERFACE_NAME, signature='s')
     def PlaybackStateChanged(self, state):
         pass
@@ -430,6 +499,18 @@ class MediaPlayerService(dbus.service.Object):
     
     @dbus.service.signal(INTERFACE_NAME, signature='s')
     def UsbDeviceRemoved(self, device_path):
+        pass
+    
+    @dbus.service.signal(INTERFACE_NAME, signature='as')
+    def BluetoothDevicesChanged(self, devices):
+        pass
+    
+    @dbus.service.signal(INTERFACE_NAME, signature='s')
+    def BluetoothDeviceConnected(self, device):
+        pass
+    
+    @dbus.service.signal(INTERFACE_NAME, signature='s')
+    def BluetoothDeviceDisconnected(self, device):
         pass
     
     def _update_position(self):
@@ -463,6 +544,7 @@ def main():
     
     print(f"MediaPlayer service registered: {SERVICE_NAME}")
     print(f"Object path: {OBJECT_PATH}")
+    print("Features: USB hot-swap, Bluetooth audio")
     print("Service ready. Press Ctrl+C to exit.")
     
     loop = GLib.MainLoop()
