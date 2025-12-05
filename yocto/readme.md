@@ -1,4 +1,6 @@
-# HeadUnit IVI System
+# HeadUnit IVI System 
+
+
 ---
 
 ## 1. System Architecture Overview
@@ -102,14 +104,13 @@ graph TB
     subgraph "Application Layer - Qt6 Wayland"
         subgraph "GearSelector App"
             GS_QML[Qt6 QML UI<br/>Gear Buttons P/R/N/D/S]
-            GS_TC[ThemeClient<br/>D-Bus Subscriber]
-            GS_HANDLER[GS_Handler<br/>Gear Control Logic]
+            GS_HANDLER[GS_Handler<br/>Gear Control Logic<br/>D-Bus calls]
             GS_ENV[Environment:<br/>WAYLAND_DISPLAY=wayland-2<br/>IVI_SURFACE_ID=1001]
         end
 
         subgraph "MediaPlayer App"
             MP_QML[Qt6 QML UI<br/>Controls + Playlist]
-            MP_HANDLER[MP_Handler<br/>D-Bus Control]
+            MP_HANDLER[MP_Handler<br/>D-Bus Control<br/>Media operations]
             MP_USB[USB Playback<br/>GStreamer Backend]
             MP_YT[YouTube Support<br/>QtWebView]
             MP_KB[Virtual Keyboard<br/>qtvirtualkeyboard]
@@ -124,9 +125,7 @@ graph TB
         end
     end
 
-    GS_QML --> GS_TC
     GS_QML --> GS_HANDLER
-    GS_TC --> GS_ENV
     GS_HANDLER --> GS_ENV
 
     MP_QML --> MP_HANDLER
@@ -249,7 +248,7 @@ graph TB
     end
 
     subgraph "Clients"
-        APP_GS[GearSelector App<br/>ThemeClient]
+        APP_GS[GearSelector App<br/>GS_Handler]
         APP_MP[MediaPlayer App<br/>MP_Handler]
         APP_TC[ThemeColor App<br/>ThemeColorClient]
         APP_IVI[IVI Compositor<br/>DBusManager]
@@ -489,8 +488,8 @@ sequenceDiagram
     participant TC_Client as ThemeColorClient<br/>(C++ Class)
     participant DBus as com.seame.ThemeColor<br/>(D-Bus Service)
     participant Signal as AccentColorChanged<br/>(Broadcast Signal)
-    participant GS as GearSelector<br/>(ThemeClient)
-    participant MP as MediaPlayer<br/>(ThemeClient)
+    participant GS as GearSelector<br/>(GS_Handler)
+    participant MP as MediaPlayer<br/>(MP_Handler)
     participant IVI as IVI Compositor<br/>(DBusManager)
     participant IC as Instrument Cluster<br/>(PiRacerBridge)
 
@@ -782,7 +781,7 @@ graph TB
 graph TB
     subgraph "Yocto Build System"
         subgraph "Base Layers"
-            POKY[poky/<br/>Yocto Reference Distro<br/>Kirkstone 4.0]
+            POKY[poky/<br/>Yocto Reference Distro<br/>Scarthgap 5.0.12]
             META_OE[meta-openembedded/<br/>meta-oe<br/>meta-python<br/>meta-multimedia<br/>meta-networking]
         end
 
@@ -982,7 +981,7 @@ mindmap
       INA219 Battery Sensor
       USB HID Gamepad
     Software Stack
-      Yocto Kirkstone 4.0
+      Yocto Scarthgap 5.0.12
       Poky Linux Custom
       Linux Kernel 6.1.x
       Weston 10.0.1
