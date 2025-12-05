@@ -969,50 +969,7 @@ graph TB
 
 ---
 
-## 18. System Statistics Summary
 
-```mermaid
-mindmap
-  root((HeadUnit IVI<br/>System Stats))
-    Hardware
-      Raspberry Pi 4 8GB
-      Dual 7" 1024x600 HDMI
-      Waveshare 2-CH CAN HAT
-      INA219 Battery Sensor
-      USB HID Gamepad
-    Software Stack
-      Yocto Scarthgap 5.0.12
-      Poky Linux Custom
-      Linux Kernel 6.1.x
-      Weston 10.0.1
-      Qt 6.5.0
-      D-Bus 1.14.x
-      Python 3.11.x
-    Applications
-      GearSelector 67KB
-      MediaPlayer 131KB
-      ThemeColor 67KB
-      Total Image 1.2GB
-    Performance
-      Boot Time 15s
-      D-Bus <5ms
-      Theme Update <50ms
-      CAN Processing 50Hz
-      Frame Rate 60FPS
-      Memory 400MB
-    Network
-      WiFi BCM43455
-      Bluetooth 5.0
-      CAN0 500kbps SPI0
-      CAN1 500kbps SPI1
-    Development
-      3 Months
-      Team 2-3 Devs
-      15000 Lines of Code
-      Image Size 3.5GB
-```
-
----
 
 
 ---
