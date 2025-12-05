@@ -1014,26 +1014,7 @@ mindmap
 
 ---
 
-**Presentation Date:** Monday, December 9, 2025
-**Project:** HeadUnit IVI System - SEAME
-**Status:** ✅ Working Image (Previous Stable Version)
 
 ---
 
-## Usage Notes:
 
-1. **Copy any diagram** and paste it into:
-   - Mermaid Live Editor: https://mermaid.live
-   - GitHub README (renders automatically)
-   - VS Code (with Mermaid extension)
-   - Notion, Confluence, GitLab (native support)
-
-2. **Export options:**
-   - PNG/SVG from Mermaid Live
-   - PDF via browser print
-   - PowerPoint via copy-paste
-
-3. **Customize:**
-   - Change colors: `style NodeName fill:#HEX`
-   - Adjust layout: `TB` (top-bottom), `LR` (left-right)
-   - Add more details as needed
