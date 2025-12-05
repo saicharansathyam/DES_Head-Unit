@@ -16,6 +16,9 @@ inherit setuptools3
 RDEPENDS:${PN} += " \
     adafruit-blinka \
     adafruit-circuitpython-ina219 \
+    python3-adafruit-pca9685 \
+    python3-adafruit-ssd1306 \
+    python3-rpi-gpio \
     python3-smbus \
 "
 

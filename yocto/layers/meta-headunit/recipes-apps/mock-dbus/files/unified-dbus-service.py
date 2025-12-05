@@ -139,7 +139,7 @@ class DashboardService(dbus.service.Object):
         self.turn_signal = "off"
         
         # Hardware integration
-        self.can_bus = None
+        self.can_buses = []  # Support multiple CAN interfaces
         self.ina219 = None
         self.kalman_filter = None
         self._last_speed_ts = None
@@ -171,6 +171,18 @@ class DashboardService(dbus.service.Object):
         return True
     
     # ==================== Hardware Integration ====================
+    def _check_can_interface_active(self, iface):
+        """Check if CAN interface exists and is UP"""
+        try:
+            import subprocess
+            result = subprocess.run(['ip', 'link', 'show', iface],
+                                  capture_output=True, text=True, timeout=1)
+            if result.returncode == 0 and 'UP' in result.stdout:
+                return True
+        except Exception:
+            pass
+        return False
+
     def init_hardware(self):
         """Initialize CAN bus, I2C sensors, Kalman filter"""
         print("[Hardware] Initializing...")
@@ -179,18 +191,32 @@ class DashboardService(dbus.service.Object):
         self.kalman_filter = KalmanSpeedFilter()
         print("  ✓ Kalman filter ready")
 
-        # Initialize CAN bus
-        can_iface = os.environ.get("CAN_IFACE", "can0")
-        for iface in [can_iface, "can0", "can1"]:
+        # Initialize CAN bus - check both can0 and can1, prioritize active ones
+        can_interfaces = ["can0", "can1"]
+        can_iface_env = os.environ.get("CAN_IFACE")
+
+        # If CAN_IFACE is set, try it first
+        if can_iface_env and can_iface_env not in can_interfaces:
+            can_interfaces.insert(0, can_iface_env)
+        elif can_iface_env:
+            can_interfaces.remove(can_iface_env)
+            can_interfaces.insert(0, can_iface_env)
+
+        # Try to connect to ALL active CAN interfaces
+        for iface in can_interfaces:
+            if not self._check_can_interface_active(iface):
+                print(f"  ○ CAN {iface} not active, skipping")
+                continue
+
             try:
-                self.can_bus = can.interface.Bus(channel=iface, bustype='socketcan')
+                bus = can.interface.Bus(channel=iface, bustype='socketcan')
+                self.can_buses.append((iface, bus))
                 print(f"  ✓ CAN connected ({iface})")
-                break
             except Exception as e:
                 print(f"  ✗ CAN {iface} failed: {e}")
 
-        if not self.can_bus:
-            print("  ✗ CAN initialization failed - no valid interface")
+        if not self.can_buses:
+            print("  ✗ CAN initialization failed - no active interface found")
             return
 
         # Initialize INA219 battery sensor
@@ -201,8 +227,9 @@ class DashboardService(dbus.service.Object):
         except Exception as e:
             print(f"  ✗ INA219 init failed: {e}")
 
-        # Start hardware read threads
-        threading.Thread(target=self._read_can_loop, daemon=True).start()
+        # Start hardware read threads (one thread per CAN bus)
+        for iface, bus in self.can_buses:
+            threading.Thread(target=self._read_can_loop, args=(iface, bus), daemon=True).start()
         threading.Thread(target=self._poll_battery_loop, daemon=True).start()
         print("[Hardware] All threads started")
     
@@ -234,28 +261,28 @@ class DashboardService(dbus.service.Object):
             self.TurnSignalChanged(turn_mode)
     
     def send_to_can(self, msg_id, data):
-        """Send message to CAN bus (if hardware mode)"""
-        if self.can_bus:
+        """Send message to all CAN buses (if hardware mode)"""
+        for iface, bus in self.can_buses:
             try:
                 msg = can.Message(arbitration_id=msg_id, data=data, is_extended_id=False)
-                self.can_bus.send(msg)
+                bus.send(msg)
             except Exception as e:
-                print(f"CAN send error: {e}")
+                print(f"CAN send error on {iface}: {e}")
 
-    def _read_can_loop(self):
-        """Background thread to read CAN messages"""
-        print("[CAN] Listening for 0x100 (speed), 0x102 (gear), 0x103 (turn)")
+    def _read_can_loop(self, iface, bus):
+        """Background thread to read CAN messages from a specific interface"""
+        print(f"[CAN:{iface}] Listening for 0x100 (speed), 0x102 (gear), 0x103 (turn)")
         while True:
             try:
-                message = self.can_bus.recv(timeout=1.0)
+                message = bus.recv(timeout=1.0)
                 now = time.monotonic()
                 if message:
-                    self._process_can_message(message, now)
+                    self._process_can_message(message, now, iface)
             except Exception as e:
-                print(f"CAN read error: {e}")
+                print(f"CAN read error on {iface}: {e}")
                 time.sleep(1)
 
-    def _process_can_message(self, message, now_ts):
+    def _process_can_message(self, message, now_ts, iface):
         """Process incoming CAN message"""
         try:
             msg_id = message.arbitration_id

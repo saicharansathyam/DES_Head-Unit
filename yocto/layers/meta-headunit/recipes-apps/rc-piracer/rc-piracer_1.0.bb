@@ -7,6 +7,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda
 
 SRC_URI = " \
     file://rc_piracer.py \
+    file://gamepads.py \
     file://rc-piracer.service \
 "
 
@@ -18,9 +19,10 @@ SYSTEMD_SERVICE:${PN} = "rc-piracer.service"
 SYSTEMD_AUTO_ENABLE = "enable"
 
 do_install() {
-    # Install Python script
+    # Install Python scripts
     install -d ${D}${bindir}
     install -m 0755 ${WORKDIR}/rc_piracer.py ${D}${bindir}/
+    install -m 0644 ${WORKDIR}/gamepads.py ${D}${bindir}/
 
     # Change SessionBus to SystemBus for hardware mode
     sed -i 's/bus = dbus.SessionBus()/bus = dbus.SystemBus()/' \
@@ -33,13 +35,16 @@ do_install() {
 
 FILES:${PN} = " \
     ${bindir}/rc_piracer.py \
+    ${bindir}/gamepads.py \
     ${systemd_system_unitdir}/rc-piracer.service \
 "
 
 RDEPENDS:${PN} += " \
+    python3-core \
     python3-dbus \
     python3-pygobject \
-    python3-evdev \
-    python3-piracer-py \
+    python3-fcntl \
+    python3-logging \
+    des-piracer-vehicles \
     mock-dbus \
 "

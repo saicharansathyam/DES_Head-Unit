@@ -40,8 +40,6 @@ IMAGE_INSTALL:append = " \
     python3-can \
     python3-pyserial \
     python3-smbus \
-    python3-piracer-py \
-    python3-evdev \
     can-utils \
     kernel-module-can \
     kernel-module-can-dev \
